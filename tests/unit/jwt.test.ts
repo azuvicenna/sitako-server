@@ -1,8 +1,5 @@
 import { generateToken, verifyToken } from "@/utils/auth/jwt";
 
-beforeAll(() => {
-  process.env.JWT_SECRET = "rahasia-negara";
-});
 
 describe("JWT Utils", () => {
   const mockPayload = { userId: 123, role: "admin" };

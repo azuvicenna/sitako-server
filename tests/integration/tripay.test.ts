@@ -6,13 +6,6 @@ import {
 } from "@/utils/services/tripay";
 import { generateTransactionCode } from "@/utils/generators/transaction-code";
 
-// Set env vars yang dibutuhkan tripay.ts sebelum module diload
-beforeAll(() => {
-  process.env.TRIPAY_API_KEY = "test-api-key";
-  process.env.TRIPAY_PRIVATE_KEY = "test-private-key";
-  process.env.TRIPAY_MERCHANT_CODE = "TEST123";
-  process.env.TRIPAY_API_URL = "https://tripay.co.id/api-sandbox/";
-});
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -65,13 +58,14 @@ describe("Tripay Utils", () => {
 
       const result = await getPaymentChannels();
 
+      const baseUrl = (process.env.TRIPAY_API_URL || "").replace(/\/+$/, "");
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(fetchSpy).toHaveBeenCalledWith(
-        "https://tripay.co.id/api-sandbox/merchant/payment-channel",
+        `${baseUrl}/merchant/payment-channel`,
         expect.objectContaining({
           method: "GET",
           headers: expect.objectContaining({
-            Authorization: "Bearer test-api-key",
+            Authorization: `Bearer ${process.env.TRIPAY_API_KEY}`,
           }),
         }),
       );
@@ -129,13 +123,14 @@ describe("Tripay Utils", () => {
 
       const result = await createTransaction(payload);
 
+      const baseUrl = (process.env.TRIPAY_API_URL || "").replace(/\/+$/, "");
       // Pastikan fetch dipanggil ke endpoint yang benar
       expect(fetchSpy).toHaveBeenCalledWith(
-        "https://tripay.co.id/api-sandbox/transaction/create",
+        `${baseUrl}/transaction/create`,
         expect.objectContaining({
           method: "POST",
           headers: expect.objectContaining({
-            Authorization: "Bearer test-api-key",
+            Authorization: `Bearer ${process.env.TRIPAY_API_KEY}`,
             "Content-Type": "application/json",
           }),
         }),
@@ -205,7 +200,7 @@ describe("Tripay Utils", () => {
         expect.objectContaining({
           method: "GET",
           headers: expect.objectContaining({
-            Authorization: "Bearer test-api-key",
+            Authorization: `Bearer ${process.env.TRIPAY_API_KEY}`,
           }),
         }),
       );
