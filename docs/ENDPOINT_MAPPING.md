@@ -101,3 +101,18 @@ Berikut adalah mapping alur fungsi dari masing-masing fitur utama beserta deskri
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `/user/librarians/:id` | GET | Menampilkan rincian data profil milik seorang Pustakawan | `showLibrarian` | `getLibrarianById` | `findLibrarian` |
 | `/user/members/:id` | GET | Menampilkan rincian data profil milik seorang Anggota (Member) | `showMember` | `getMemberById` | `findMember` |
+
+### 7. Fitur Dashboard Pustakawan (`/dashboard`)
+
+| Endpoint | HTTP Method | Fungsi / Deskripsi | Method Controller | Method Service | Method Repository |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/dashboard/summary` | GET | Mengambil ringkasan data total buku, anggota, peminjaman, dan denda | `getSummary` | `getDashboardSummaryService` | `getDashboardSummaryRepo` |
+| `/dashboard/transaction/today` | GET | Mengambil daftar transaksi peminjaman/pengembalian khusus hari ini | `getTodayTransactions` | `getTodayTransactionsService` | `getTodayTransactionsRepo`, `getTodaySummaryRepo` |
+| `/dashboard/statistics` | GET | Mengambil statistik tren transaksi 7 hari terakhir (dengan Redis cache) | `getWeeklyStatistics` | `getWeeklyStatisticsService` | `getWeeklyStatisticsRepo` |
+
+### 8. Fitur Profil Mandiri (`/profile`)
+
+| Endpoint | HTTP Method | Fungsi / Deskripsi | Method Controller | Method Service | Method Repository |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/profile/me` | GET | Menampilkan profil pengguna yang sedang login (Pustakawan / Anggota) | `getMyProfile` | `getProfileService` | `findLibrarianById` / `findMemberById` |
+| `/profile/me` | PUT | Memperbarui data profil mandiri pengguna yang sedang login | `updateMyProfile` | `updateProfileService` | `updateLibrarianById` / `updateMemberById` |
