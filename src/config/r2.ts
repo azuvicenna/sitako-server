@@ -1,12 +1,24 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
-export const s3Client = new S3Client({
+const { S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET_NAME } =
+  process.env;
+
+if (
+  !S3_ENDPOINT ||
+  !S3_ACCESS_KEY_ID ||
+  !S3_SECRET_ACCESS_KEY ||
+  !S3_BUCKET_NAME
+) {
+  throw new Error("Missing required S3/R2 environment variables");
+}
+
+export const s3Client: S3Client = new S3Client({
   region: "auto",
-  endpoint: process.env.S3_ENDPOINT,
+  endpoint: S3_ENDPOINT,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+    accessKeyId: S3_ACCESS_KEY_ID,
+    secretAccessKey: S3_SECRET_ACCESS_KEY,
   },
 });
 
-export const R2_BUCKET = process.env.S3_BUCKET_NAME || "";
+export const R2_BUCKET: string = S3_BUCKET_NAME;

@@ -7,10 +7,10 @@ import {
   findMemberRawById,
   removeMemberById,
   findMembersWithPagination,
-  MemberInsert,
+  type MemberInsert,
 } from "@/repositories/librarian/member.repository";
 import { deleteFile, uploadFile } from "@/utils/services/storage";
-import {
+import type {
   CreateMember,
   UpdateMember,
 } from "@/validations/librarian/member.schema";
@@ -18,54 +18,68 @@ import logger from "@/utils/core/logger";
 
 const extractFileKey = (url: string) => url.split("/").slice(-2).join("/");
 
+const safeDeleteFile = async (url?: string | null, label = "file") => {
+  if (!url) return;
+  try {
+    await deleteFile(extractFileKey(url));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to delete ${label} (${url}): ${message}`);
+  }
+};
+
+const uploadWithUniqueName = async (
+  folder: string,
+  file: Express.Multer.File,
+) => {
+  const ext = file.originalname.split(".").pop();
+  const filename = ext ? `${uuidv4()}.${ext}` : uuidv4();
+  return uploadFile(folder, file, filename);
+};
+
 export const getMembersWithPagination = async (
   statusActive: string,
   page: number,
   limit: number,
   search: string,
 ) => {
-  return await findMembersWithPagination(statusActive, page, limit, search);
+  return findMembersWithPagination(statusActive, page, limit, search);
 };
 
 export const getMemberById = async (id: string) => {
-  return await findMemberById(id);
+  return findMemberById(id);
 };
 
 export const createNewMember = async (
   payload: CreateMember,
-  fotoFile?: Express.Multer.File,
+  photoFile?: Express.Multer.File,
 ) => {
-  let fotoUrl = "";
-
-  if (fotoFile) {
-    const ext = fotoFile.originalname.split(".").pop();
-    fotoUrl = await uploadFile("profiles", fotoFile, `${uuidv4()}.${ext}`);
-  }
-
-  const hashedPassword = await bcrypt.hash(payload.password as string, 10);
-
-  const memberData: MemberInsert = {
-    nama: payload.nama,
-    nis: payload.nis,
-    email: payload.email,
-    password: hashedPassword,
-    telepon: payload.telepon,
-    foto: fotoUrl,
-    // status_aktif sudah di-transform oleh Zod schema menjadi boolean
-    status_aktif: payload.status_aktif ?? true,
-  };
+  let photoUrl = "";
 
   try {
+    if (photoFile) {
+      photoUrl = await uploadWithUniqueName("profiles", photoFile);
+    }
+
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
+
+    const memberData: MemberInsert = {
+      nama: payload.nama,
+      nis: payload.nis,
+      email: payload.email,
+      password: hashedPassword,
+      telepon: payload.telepon,
+      foto: photoUrl,
+      status_aktif: payload.status_aktif ?? true,
+    };
+
     const created = await insertMember(memberData);
-    const { password, ...resultWithoutPassword } = created;
-    return resultWithoutPassword;
+    const { password: _, ...memberWithoutPassword } = created;
+
+    return memberWithoutPassword;
   } catch (error) {
-    if (fotoUrl) {
-      await deleteFile(extractFileKey(fotoUrl)).catch((err) =>
-        logger.error(
-          `Failed to delete orphaned file ${fotoUrl}: ${err.message}`,
-        ),
-      );
+    if (photoUrl) {
+      await safeDeleteFile(photoUrl, "orphaned profile photo");
     }
     throw error;
   }
@@ -74,49 +88,41 @@ export const createNewMember = async (
 export const updateExistingMember = async (
   id: string,
   payload: UpdateMember,
-  fotoFile?: Express.Multer.File,
+  photoFile?: Express.Multer.File,
 ) => {
   const existingMember = await findMemberRawById(id);
   if (!existingMember) return null;
 
   const updateData: Partial<MemberInsert> = { ...payload };
-
-  if (payload.password) {
-    updateData.password = await bcrypt.hash(payload.password, 10);
-  }
-
-  if (fotoFile) {
-    const ext = fotoFile.originalname.split(".").pop();
-    updateData.foto = await uploadFile(
-      "profiles",
-      fotoFile,
-      `${uuidv4()}.${ext}`,
-    );
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    return existingMember;
-  }
+  let newPhotoUrl: string | undefined;
 
   try {
+    if (payload.password) {
+      updateData.password = await bcrypt.hash(payload.password, 10);
+    }
+
+    if (photoFile) {
+      newPhotoUrl = await uploadWithUniqueName("profiles", photoFile);
+      updateData.foto = newPhotoUrl;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      const { password: _, ...memberWithoutPassword } = existingMember;
+      return memberWithoutPassword;
+    }
+
     const updated = await updateMemberById(id, updateData);
     if (!updated) return null;
 
-    if (fotoFile && existingMember.foto) {
-      await deleteFile(extractFileKey(existingMember.foto)).catch((err) =>
-        logger.error(`Failed to delete old profile file: ${err.message}`),
-      );
+    if (photoFile && existingMember.foto) {
+      await safeDeleteFile(existingMember.foto, "old profile photo");
     }
 
-    const { password, ...resultWithoutPassword } = updated;
-    return resultWithoutPassword;
+    const { password: _, ...memberWithoutPassword } = updated;
+    return memberWithoutPassword;
   } catch (error) {
-    if (fotoFile && updateData.foto) {
-      await deleteFile(extractFileKey(updateData.foto)).catch((err) =>
-        logger.error(
-          `Failed to delete orphaned file ${updateData.foto}: ${err.message}`,
-        ),
-      );
+    if (newPhotoUrl) {
+      await safeDeleteFile(newPhotoUrl, "orphaned profile photo");
     }
     throw error;
   }
@@ -129,9 +135,7 @@ export const deleteExistingMember = async (id: string) => {
   const deleted = await removeMemberById(id);
 
   if (deleted && member.foto) {
-    await deleteFile(extractFileKey(member.foto)).catch((err) =>
-      logger.error(`Failed to delete profile file on delete: ${err.message}`),
-    );
+    await safeDeleteFile(member.foto, "profile photo on delete");
   }
 
   return deleted;

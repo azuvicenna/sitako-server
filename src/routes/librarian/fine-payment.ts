@@ -1,4 +1,12 @@
 import { Router } from "express";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
+import { validate } from "@/middlewares/validate.middleware";
+import { paginationSchema } from "@/validations/utils/pagination.schema";
+import {
+  createFinePaymentSchema,
+  updateFinePaymentSchema,
+} from "@/validations/librarian/fine-payment.schema";
 import {
   createFinePayment,
   deleteFinePayment,
@@ -6,15 +14,8 @@ import {
   showFinePayment,
   updateFinePayment,
 } from "@/controllers/librarian/fine-payment.controller";
-import { validate } from "@/middlewares/validate.middleware";
-import { paginationSchema } from "@/validations/utils/pagination.schema";
-import { verifyAuth } from "@/middlewares/auth.middleware";
-import {
-  createFinePaymentSchema,
-  updateFinePaymentSchema,
-} from "@/validations/librarian/fine-payment.schema";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 

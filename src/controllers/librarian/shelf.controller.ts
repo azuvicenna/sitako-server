@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import * as shelfService from "@/services/librarian/shelf.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 
@@ -23,22 +25,15 @@ export const getShelvesHandler = async (req: Request, res: Response) => {
 
 export const showShelf = async (req: Request, res: Response) => {
   try {
-    const shelfId = req.params.id as string;
+    const shelfId = resolveParam(req.params.id);
 
     if (!shelfId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID rak buku tidak valid",
-      });
+      return sendFail(res, 400, "ID rak buku tidak valid");
     }
 
     const result = await shelfService.getShelfById(shelfId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Rak buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Rak buku tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -49,8 +44,7 @@ export const showShelf = async (req: Request, res: Response) => {
 
 export const createShelf = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
-    const result = await shelfService.createNewShelf(validatedBody);
+    const result = await shelfService.createNewShelf(req.body ?? {});
 
     return sendSuccess(res, result, "Rak buku berhasil ditambahkan");
   } catch (error) {
@@ -60,26 +54,19 @@ export const createShelf = async (req: Request, res: Response) => {
 
 export const updateShelf = async (req: Request, res: Response) => {
   try {
-    const shelfId = req.params.id as string;
+    const shelfId = resolveParam(req.params.id);
 
     if (!shelfId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Rak buku tidak valid",
-      });
+      return sendFail(res, 400, "ID rak buku tidak valid");
     }
 
-    const validatedBody = req.body;
     const result = await shelfService.updateExistingShelf(
       shelfId,
-      validatedBody,
+      req.body ?? {},
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Rak buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Rak buku tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data rak buku berhasil diperbarui");
@@ -90,22 +77,15 @@ export const updateShelf = async (req: Request, res: Response) => {
 
 export const deleteShelf = async (req: Request, res: Response) => {
   try {
-    const shelfId = req.params.id as string;
+    const shelfId = resolveParam(req.params.id);
 
     if (!shelfId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Rak buku tidak valid",
-      });
+      return sendFail(res, 400, "ID rak buku tidak valid");
     }
 
     const result = await shelfService.deleteExistingShelf(shelfId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Rak buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Rak buku tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data rak buku berhasil dihapus");

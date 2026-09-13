@@ -1,18 +1,23 @@
 import { Request, Response } from "express";
 import * as finePaymentService from "@/services/member/fine-payment.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 
 export const getFinePaymentsHandler = async (req: Request, res: Response) => {
   try {
-    const anggotaId = req.user?.id as string;
-    const { page, limit, search } = getPaginationParams(req.query);
+    const memberId = req.user?.id;
+    if (!memberId) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+    }
 
+    const { page, limit, search } = getPaginationParams(req.query);
     const result = await finePaymentService.getFinePaymentsWithPagination(
-      anggotaId,
+      memberId,
       page,
       limit,
       search,
@@ -26,26 +31,23 @@ export const getFinePaymentsHandler = async (req: Request, res: Response) => {
 
 export const showFinePayment = async (req: Request, res: Response) => {
   try {
-    const paymentId = req.params.id as string;
-    const anggotaId = req.user?.id as string;
-
+    const paymentId = resolveParam(req.params.id);
     if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID pembayaran denda tidak valid",
-      });
+      return sendFail(res, 400, "ID pembayaran denda tidak valid");
+    }
+
+    const memberId = req.user?.id;
+    if (!memberId) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
     }
 
     const result = await finePaymentService.getFinePaymentById(
       paymentId,
-      anggotaId,
+      memberId,
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data pembayaran denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data pembayaran denda tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -56,14 +58,17 @@ export const showFinePayment = async (req: Request, res: Response) => {
 
 export const initiatePayment = async (req: Request, res: Response) => {
   try {
-    const anggotaId = req.user?.id as string;
-    const validatedBody = req.body;
-    
-    // Asumsi req.body divalidasi oleh Zod middleware (initiateOnlinePaymentSchema)
+    const memberId = req.user?.id;
+    if (!memberId) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+    }
+
+    const { transaksiId: transactionId, paymentMethodCode } = req.body ?? {};
+
     const result = await finePaymentService.initiateOnlinePayment(
-      anggotaId,
-      validatedBody.transaksiId,
-      validatedBody.paymentMethodCode
+      memberId,
+      transactionId,
+      paymentMethodCode,
     );
 
     return sendSuccess(res, result, "Pembayaran berhasil diinisiasi");

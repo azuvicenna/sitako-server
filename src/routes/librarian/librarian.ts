@@ -1,39 +1,32 @@
 import { Router } from "express";
-import {
-  getLibrarianHandler,
-  showLibrarian,
-  createLibrarian,
-  updateLibrarian,
-  deleteLibrarian,
-} from "@/controllers/librarian/librarian.controller";
+
+import { upload } from "@/middlewares/upload.middleware";
+import { verifyAuth } from "@/middlewares/auth.middleware";
 import { validate } from "@/middlewares/validate.middleware";
 import { paginationSchema } from "@/validations/utils/pagination.schema";
 import {
   createLibrarianSchema,
   updateLibrarianSchema,
 } from "@/validations/librarian/librarian.schema";
-import { verifyAuth } from "@/middlewares/auth.middleware";
-import { upload } from "@/middlewares/upload.middleware";
+import {
+  createLibrarian,
+  deleteLibrarian,
+  getLibrarianHandler,
+  showLibrarian,
+  updateLibrarian,
+} from "@/controllers/librarian/librarian.controller";
 
-const router = Router();
+const router: Router = Router();
+const fotoUpload = upload.single("foto");
 
 router.use(verifyAuth);
 
-router.get(
-  "/",
-  validate(paginationSchema, "query"),
-  getLibrarianHandler,
-);
+router.get("/", validate(paginationSchema, "query"), getLibrarianHandler);
 router.get("/:id", showLibrarian);
-router.post(
-  "/",
-  upload.single("foto"),
-  validate(createLibrarianSchema),
-  createLibrarian,
-);
+router.post("/", fotoUpload, validate(createLibrarianSchema), createLibrarian);
 router.put(
   "/:id",
-  upload.single("foto"),
+  fotoUpload,
   validate(updateLibrarianSchema),
   updateLibrarian,
 );

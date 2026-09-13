@@ -1,4 +1,16 @@
 import { Router } from "express";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
+import { validate } from "@/middlewares/validate.middleware";
+import { paginationSchema } from "@/validations/utils/pagination.schema";
+import {
+  createShelfSchema,
+  updateShelfSchema,
+} from "@/validations/librarian/shelf.schema";
+import {
+  createStackSchema,
+  updateStackSchema,
+} from "@/validations/librarian/stack.schema";
 import {
   createShelf,
   deleteShelf,
@@ -6,13 +18,6 @@ import {
   showShelf,
   updateShelf,
 } from "@/controllers/librarian/shelf.controller";
-import { validate } from "@/middlewares/validate.middleware";
-import { paginationSchema } from "@/validations/utils/pagination.schema";
-import { verifyAuth } from "@/middlewares/auth.middleware";
-import {
-  createShelfSchema,
-  updateShelfSchema,
-} from "@/validations/librarian/shelf.schema";
 import {
   createStack,
   deleteStack,
@@ -20,12 +25,8 @@ import {
   showStack,
   updateStack,
 } from "@/controllers/librarian/stack.controller";
-import {
-  createStackSchema,
-  updateStackSchema,
-} from "@/validations/librarian/stack.schema";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 
@@ -35,9 +36,13 @@ router.post("/", validate(createShelfSchema), createShelf);
 router.put("/:id", validate(updateShelfSchema), updateShelf);
 router.delete("/:id", deleteShelf);
 
-router.get("/:shelfId/stacks", validate(paginationSchema, "query"), getStacksHandler);
+router.get(
+  "/:shelfId/stacks",
+  validate(paginationSchema, "query"),
+  getStacksHandler,
+);
 router.get("/:shelfId/stacks/detail/:id", showStack);
-router.post("/:shelfId/stacks/", validate(createStackSchema), createStack);
+router.post("/:shelfId/stacks", validate(createStackSchema), createStack);
 router.put("/:shelfId/stacks/:id", validate(updateStackSchema), updateStack);
 router.delete("/:shelfId/stacks/:id", deleteStack);
 

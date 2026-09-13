@@ -1,6 +1,6 @@
-import { count, eq, or, ilike, desc, sql } from "drizzle-orm";
+import { count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { fines, books } from "@/db/schema";
+import { books, fines } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 import { clearCacheByPattern } from "@/utils/core/cache";
 
@@ -8,31 +8,33 @@ export type FineInsert = typeof fines.$inferInsert;
 export type FineSelect = typeof fines.$inferSelect;
 
 const clearFineCache = async () => {
-  await clearCacheByPattern(`fine:*`);
+  await clearCacheByPattern("fine:*");
 };
 
-export async function findFinesWithPagination(
+export const findFinesWithPagination = async (
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `fine:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `fine:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const whereClause = search
+      const searchPattern = `%${trimmedSearch}%`;
+      const whereClause = trimmedSearch
         ? or(
-            ilike(sql`CAST(${fines.jenisDenda} AS TEXT)`, `%${search}%`),
-            ilike(sql`CAST(${fines.hargaDenda} AS TEXT)`, `%${search}%`),
-            ilike(sql`CAST(${fines.metodePerhitungan} AS TEXT)`, `%${search}%`),
-            ilike(books.judul, `%${search}%`),
+            ilike(sql`CAST(${fines.jenisDenda} AS TEXT)`, searchPattern),
+            ilike(sql`CAST(${fines.hargaDenda} AS TEXT)`, searchPattern),
+            ilike(sql`CAST(${fines.metodePerhitungan} AS TEXT)`, searchPattern),
+            ilike(books.judul, searchPattern),
           )
         : undefined;
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: fines.id,
@@ -55,19 +57,19 @@ export async function findFinesWithPagination(
           .where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findFine(id: string): Promise<FineSelect | null> {
-  const result = await db.select().from(fines).where(eq(fines.id, id)).limit(1);
-  return result[0] || null;
-}
+export const findFine = async (id: string): Promise<FineSelect | null> => {
+  const [fine] = await db.select().from(fines).where(eq(fines.id, id)).limit(1);
+
+  return fine ?? null;
+};
 
 export const insertFine = async (data: FineInsert): Promise<FineSelect> => {
-  const result = await db.insert(fines).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(fines).values(data).returning();
 
   if (created) {
     await clearFineCache();
@@ -80,30 +82,27 @@ export const updateFineById = async (
   id: string,
   data: Partial<FineInsert>,
 ): Promise<FineSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(fines)
     .set(data)
     .where(eq(fines.id, id))
     .returning();
 
-  const updated = result[0] || null;
-
   if (updated) {
     await clearFineCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
 export const removeFineById = async (
   id: string,
 ): Promise<FineSelect | null> => {
-  const result = await db.delete(fines).where(eq(fines.id, id)).returning();
-  const deleted = result[0] || null;
+  const [deleted] = await db.delete(fines).where(eq(fines.id, id)).returning();
 
   if (deleted) {
     await clearFineCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

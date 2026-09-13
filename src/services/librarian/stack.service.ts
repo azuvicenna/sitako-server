@@ -4,9 +4,12 @@ import {
   findStack,
   removeStackById,
   findStacksWithPagination,
-  StackInsert,
+  type StackInsert,
 } from "@/repositories/librarian/stack.repository";
-import { CreateStack, UpdateStack } from "@/validations/librarian/stack.schema";
+import type {
+  CreateStack,
+  UpdateStack,
+} from "@/validations/librarian/stack.schema";
 
 export const getStacksWithPagination = async (
   shelfId: string,
@@ -14,16 +17,16 @@ export const getStacksWithPagination = async (
   limit: number,
   search: string,
 ) => {
-  return await findStacksWithPagination(shelfId, page, limit, search);
+  return findStacksWithPagination(shelfId, page, limit, search);
 };
 
 export const getStackById = async (id: string) => {
-  return await findStack(id);
+  return findStack(id);
 };
 
 export const createNewStack = async (payload: CreateStack) => {
-  const stackData = { ...payload } as StackInsert;
-  return await insertStack(stackData);
+  const stackData: StackInsert = { ...payload };
+  return insertStack(stackData);
 };
 
 export const updateExistingStack = async (id: string, payload: UpdateStack) => {
@@ -34,10 +37,10 @@ export const updateExistingStack = async (id: string, payload: UpdateStack) => {
     return existingStack;
   }
 
-  const updateData = { ...payload } as Partial<StackInsert>;
-  return await updateStackById(id, updateData);
+  const updateData: Partial<StackInsert> = { ...payload };
+  return updateStackById(id, updateData);
 };
 
 export const deleteExistingStack = async (id: string) => {
-  return await removeStackById(id);
+  return removeStackById(id);
 };

@@ -2,36 +2,34 @@ import {
   insertTransaction,
   findTransaction,
   findTransactionsWithPagination,
-  TransactionInsert,
+  type TransactionInsert,
 } from "@/repositories/member/transaction.repository";
-import { CreateTransaction } from "@/validations/member/transaction.schema";
+import type { CreateTransaction } from "@/validations/member/transaction.schema";
 import { generateTransactionCode } from "@/utils/generators/transaction-code";
 
 export const getTransactionsWithPagination = async (
-  anggotaId: string,
+  memberId: string,
   status: string,
   page: number,
   limit: number,
   search: string,
 ) => {
-  return await findTransactionsWithPagination(anggotaId, status, page, limit, search);
+  return findTransactionsWithPagination(memberId, status, page, limit, search);
 };
 
-export const getTransactionById = async (id: string, anggotaId: string) => {
-  return await findTransaction(id, anggotaId);
+export const getTransactionById = async (id: string, memberId: string) => {
+  return findTransaction(id, memberId);
 };
 
 export const createNewTransaction = async (
-  anggotaId: string,
+  memberId: string,
   payload: CreateTransaction,
 ) => {
-  const kdTransaksi = generateTransactionCode();
-  
-  const transactionData = { 
-    ...payload, 
-    anggotaId,
-    kdTransaksi 
-  } as TransactionInsert;
+  const transactionData: TransactionInsert = {
+    ...payload,
+    anggotaId: memberId,
+    kdTransaksi: generateTransactionCode(),
+  };
 
-  return await insertTransaction(transactionData);
-};
+  return insertTransaction(transactionData);
+};

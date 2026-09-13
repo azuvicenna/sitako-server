@@ -1,4 +1,4 @@
-import { count, eq, and, ilike, or, desc } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { members } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
@@ -9,17 +9,20 @@ export type MemberInsert = typeof members.$inferInsert;
 export type MemberSelect = typeof members.$inferSelect;
 
 const clearMemberCache = async () => {
-  await clearCacheByPattern("member:*");
-  await invalidateDashboardCache();
+  await Promise.all([
+    clearCacheByPattern("member:*"),
+    invalidateDashboardCache(),
+  ]);
 };
 
-export async function findMembersWithPagination(
+export const findMembersWithPagination = async (
   statusActive: string,
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `member:status:${statusActive}:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `member:status:${statusActive}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
@@ -32,13 +35,14 @@ export async function findMembersWithPagination(
         conditions.push(eq(members.status_aktif, statusActive === "true"));
       }
 
-      if (search) {
+      if (trimmedSearch) {
+        const searchPattern = `%${trimmedSearch}%`;
         conditions.push(
           or(
-            ilike(members.nama, `%${search}%`),
-            ilike(members.nis, `%${search}%`),
-            ilike(members.email, `%${search}%`),
-            ilike(members.telepon, `%${search}%`),
+            ilike(members.nama, searchPattern),
+            ilike(members.nis, searchPattern),
+            ilike(members.email, searchPattern),
+            ilike(members.telepon, searchPattern),
           ),
         );
       }
@@ -46,7 +50,7 @@ export async function findMembersWithPagination(
       const whereClause =
         conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: members.id,
@@ -66,13 +70,13 @@ export async function findMembersWithPagination(
         db.select({ total: count() }).from(members).where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findMemberById(id: string) {
-  const result = await db
+export const findMemberById = async (id: string) => {
+  const [member] = await db
     .select({
       id: members.id,
       nama: members.nama,
@@ -87,24 +91,25 @@ export async function findMemberById(id: string) {
     .where(eq(members.id, id))
     .limit(1);
 
-  return result[0] || null;
-}
+  return member ?? null;
+};
 
-export async function findMemberRawById(id: string) {
-  const result = await db
+export const findMemberRawById = async (
+  id: string,
+): Promise<MemberSelect | null> => {
+  const [member] = await db
     .select()
     .from(members)
     .where(eq(members.id, id))
     .limit(1);
 
-  return result[0] || null;
-}
+  return member ?? null;
+};
 
 export const insertMember = async (
   data: MemberInsert,
 ): Promise<MemberSelect> => {
-  const result = await db.insert(members).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(members).values(data).returning();
 
   if (created) {
     await clearMemberCache();
@@ -117,27 +122,30 @@ export const updateMemberById = async (
   id: string,
   data: Partial<MemberInsert>,
 ): Promise<MemberSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(members)
     .set(data)
     .where(eq(members.id, id))
     .returning();
-  const updated = result[0] || null;
 
   if (updated) {
     await clearMemberCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
-export const removeMemberById = async (id: string) => {
-  const result = await db.delete(members).where(eq(members.id, id)).returning();
-  const deleted = result[0] || null;
+export const removeMemberById = async (
+  id: string,
+): Promise<MemberSelect | null> => {
+  const [deleted] = await db
+    .delete(members)
+    .where(eq(members.id, id))
+    .returning();
 
   if (deleted) {
     await clearMemberCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

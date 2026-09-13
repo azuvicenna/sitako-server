@@ -1,24 +1,22 @@
 import { Request, Response } from "express";
 import * as stackService from "@/services/librarian/stack.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 
 export const getStacksHandler = async (req: Request, res: Response) => {
   try {
-    const shelfId = req.params.id as string;
+    const shelfId = resolveParam(req.params.id);
 
     if (!shelfId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID rak tidak valid",
-      });
+      return sendFail(res, 400, "ID rak tidak valid");
     }
 
     const { page, limit, search } = getPaginationParams(req.query);
-
     const result = await stackService.getStacksWithPagination(
       shelfId,
       page,
@@ -34,22 +32,15 @@ export const getStacksHandler = async (req: Request, res: Response) => {
 
 export const showStack = async (req: Request, res: Response) => {
   try {
-    const stackId = req.params.id as string;
+    const stackId = resolveParam(req.params.id);
 
     if (!stackId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID susunan tidak valid",
-      });
+      return sendFail(res, 400, "ID susunan tidak valid");
     }
 
     const result = await stackService.getStackById(stackId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Susunan rak tidak ditemukan",
-      });
+      return sendFail(res, 404, "Susunan rak tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -60,8 +51,7 @@ export const showStack = async (req: Request, res: Response) => {
 
 export const createStack = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
-    const result = await stackService.createNewStack(validatedBody);
+    const result = await stackService.createNewStack(req.body ?? {});
 
     return sendSuccess(res, result, "Susunan rak berhasil ditambahkan");
   } catch (error) {
@@ -71,26 +61,19 @@ export const createStack = async (req: Request, res: Response) => {
 
 export const updateStack = async (req: Request, res: Response) => {
   try {
-    const stackId = req.params.id as string;
+    const stackId = resolveParam(req.params.id);
 
     if (!stackId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID susunan tidak valid",
-      });
+      return sendFail(res, 400, "ID susunan tidak valid");
     }
 
-    const validatedBody = req.body;
     const result = await stackService.updateExistingStack(
       stackId,
-      validatedBody,
+      req.body ?? {},
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Susunan rak tidak ditemukan",
-      });
+      return sendFail(res, 404, "Susunan rak tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data susunan rak berhasil diperbarui");
@@ -101,22 +84,15 @@ export const updateStack = async (req: Request, res: Response) => {
 
 export const deleteStack = async (req: Request, res: Response) => {
   try {
-    const stackId = req.params.id as string;
+    const stackId = resolveParam(req.params.id);
 
     if (!stackId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID susunan tidak valid",
-      });
+      return sendFail(res, 400, "ID susunan tidak valid");
     }
 
     const result = await stackService.deleteExistingStack(stackId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Susunan rak tidak ditemukan",
-      });
+      return sendFail(res, 404, "Susunan rak tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data susunan rak berhasil dihapus");

@@ -1,26 +1,43 @@
 import { Request, Response } from "express";
 import * as bookService from "@/services/librarian/book.service";
 import { bookTypeEnum } from "@/db/schema";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
-import "multer";
 import {
   bookCoverSchema,
   bookPdfSchema,
 } from "@/validations/librarian/book.schema";
 
+type BookType = (typeof bookTypeEnum.enumValues)[number];
+
+const isValidBookType = (type: unknown): type is BookType => {
+  return (
+    typeof type === "string" &&
+    bookTypeEnum.enumValues.includes(type as BookType)
+  );
+};
+
+const extractUploadedFiles = (req: Request) => {
+  const files = req.files as
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
+  return {
+    coverFile: files?.cover?.[0],
+    pdfFile: files?.file?.[0],
+  };
+};
+
 export const getBookHandler = async (req: Request, res: Response) => {
   try {
-    const bookType = req.query.bookType as string;
+    const { bookType } = req.query;
 
-    if (!bookType || !bookTypeEnum.enumValues.includes(bookType as any)) {
-      return res.status(400).json({
-        success: false,
-        message: "Tipe buku tidak ditemukan atau tidak valid",
-      });
+    if (!isValidBookType(bookType)) {
+      return sendFail(res, 400, "Tipe buku tidak ditemukan atau tidak valid");
     }
 
     const { page, limit, search } = getPaginationParams(req.query);
@@ -39,22 +56,15 @@ export const getBookHandler = async (req: Request, res: Response) => {
 
 export const showBook = async (req: Request, res: Response) => {
   try {
-    const bookId = req.params.id as string;
+    const bookId = resolveParam(req.params.id);
 
     if (!bookId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID buku tidak valid",
-      });
+      return sendFail(res, 400, "ID buku tidak valid");
     }
 
     const result = await bookService.getBookById(bookId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Buku tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -65,31 +75,19 @@ export const showBook = async (req: Request, res: Response) => {
 
 export const createBook = async (req: Request, res: Response) => {
   try {
-    const bookTypeParam = req.query.bookType as string;
+    const { bookType: bookTypeParam } = req.query;
 
-    if (
-      !bookTypeParam ||
-      !bookTypeEnum.enumValues.includes(bookTypeParam as any)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Tipe buku tidak ditemukan atau tidak valid",
-      });
+    if (!isValidBookType(bookTypeParam)) {
+      return sendFail(res, 400, "Tipe buku tidak ditemukan atau tidak valid");
     }
 
-    const files = req.files as
-      | { [fieldname: string]: Express.Multer.File[] }
-      | undefined;
+    const { coverFile, pdfFile } = extractUploadedFiles(req);
 
-    const coverFile = files?.cover?.[0];
-    const pdfFile = files?.file?.[0];
-
-    const validatedBody = req.body;
     const validatedCover = bookCoverSchema.parse(coverFile);
     const validatedPdf = pdfFile ? bookPdfSchema.parse(pdfFile) : undefined;
 
     const result = await bookService.createNewBook(
-      validatedBody,
+      req.body ?? {},
       bookTypeParam,
       validatedCover,
       validatedPdf,
@@ -103,23 +101,14 @@ export const createBook = async (req: Request, res: Response) => {
 
 export const updateBook = async (req: Request, res: Response) => {
   try {
-    const bookId = req.params.id as string;
+    const bookId = resolveParam(req.params.id);
 
     if (!bookId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Buku tidak valid",
-      });
+      return sendFail(res, 400, "ID buku tidak valid");
     }
 
-    const files = req.files as
-      | { [fieldname: string]: Express.Multer.File[] }
-      | undefined;
+    const { coverFile, pdfFile } = extractUploadedFiles(req);
 
-    const coverFile = files?.cover?.[0];
-    const pdfFile = files?.file?.[0];
-
-    const validatedBody = req.body;
     const validatedCover = coverFile
       ? bookCoverSchema.parse(coverFile)
       : undefined;
@@ -127,16 +116,13 @@ export const updateBook = async (req: Request, res: Response) => {
 
     const result = await bookService.updateExistingBook(
       bookId,
-      validatedBody,
+      req.body ?? {},
       validatedCover,
       validatedPdf,
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Buku tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data buku berhasil diperbarui");
@@ -147,22 +133,15 @@ export const updateBook = async (req: Request, res: Response) => {
 
 export const deleteBook = async (req: Request, res: Response) => {
   try {
-    const bookId = req.params.id as string;
+    const bookId = resolveParam(req.params.id);
 
     if (!bookId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Buku tidak valid",
-      });
+      return sendFail(res, 400, "ID buku tidak valid");
     }
 
     const result = await bookService.deleteExistingBook(bookId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Buku tidak ditemukan",
-      });
+      return sendFail(res, 404, "Buku tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data buku berhasil dihapus");

@@ -1,11 +1,12 @@
 import { Router } from "express";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
 import {
   getMyProfile,
   updateMyProfile,
 } from "@/controllers/profile/profile.controller";
-import { verifyAuth } from "@/middlewares/auth.middleware";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 

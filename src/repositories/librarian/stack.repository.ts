@@ -1,6 +1,6 @@
-import { count, eq, ilike, and, sql, or, asc } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { stacks, books } from "@/db/schema";
+import { books, stacks } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 import { clearCacheByPattern } from "@/utils/core/cache";
 
@@ -8,34 +8,36 @@ export type StackInsert = typeof stacks.$inferInsert;
 export type StackSelect = typeof stacks.$inferSelect;
 
 const clearStackCache = async () => {
-  await clearCacheByPattern(`stack:*`);
+  await clearCacheByPattern("stack:*");
 };
 
-export async function findStacksWithPagination(
+export const findStacksWithPagination = async (
   shelfId: string,
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `stack:${shelfId}:search:${search}:shelf:${shelfId}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `stack:shelf:${shelfId}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const whereClause = search
+      const searchPattern = `%${trimmedSearch}%`;
+      const whereClause = trimmedSearch
         ? and(
             eq(stacks.rakId, shelfId),
             or(
-              ilike(stacks.kdSusunan, `%${search}%`),
-              ilike(sql`CAST(${stacks.nomorSusunan} AS TEXT)`, `%${search}%`),
-              ilike(books.judul, `%${search}%`),
+              ilike(stacks.kdSusunan, searchPattern),
+              ilike(sql`CAST(${stacks.nomorSusunan} AS TEXT)`, searchPattern),
+              ilike(books.judul, searchPattern),
             ),
           )
         : eq(stacks.rakId, shelfId);
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: stacks.id,
@@ -58,23 +60,23 @@ export async function findStacksWithPagination(
           .where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findStack(id: string): Promise<StackSelect | null> {
-  const result = await db
+export const findStack = async (id: string): Promise<StackSelect | null> => {
+  const [stack] = await db
     .select()
     .from(stacks)
     .where(eq(stacks.id, id))
     .limit(1);
-  return result[0] || null;
-}
+
+  return stack ?? null;
+};
 
 export const insertStack = async (data: StackInsert): Promise<StackSelect> => {
-  const result = await db.insert(stacks).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(stacks).values(data).returning();
 
   if (created) {
     await clearStackCache();
@@ -87,30 +89,30 @@ export const updateStackById = async (
   id: string,
   data: Partial<StackInsert>,
 ): Promise<StackSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(stacks)
     .set(data)
     .where(eq(stacks.id, id))
     .returning();
 
-  const updated = result[0] || null;
-
   if (updated) {
     await clearStackCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
 export const removeStackById = async (
   id: string,
 ): Promise<StackSelect | null> => {
-  const result = await db.delete(stacks).where(eq(stacks.id, id)).returning();
-  const deleted = result[0] || null;
+  const [deleted] = await db
+    .delete(stacks)
+    .where(eq(stacks.id, id))
+    .returning();
 
   if (deleted) {
     await clearStackCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

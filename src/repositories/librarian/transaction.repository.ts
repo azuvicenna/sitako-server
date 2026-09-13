@@ -1,6 +1,6 @@
-import { count, eq, ilike, desc, and, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
-import { transactions, members, librarians, books } from "@/db/schema";
+import { books, librarians, members, transactions } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 import { clearCacheByPattern } from "@/utils/core/cache";
 import { invalidateDashboardCache } from "./dashboard.repository";
@@ -9,40 +9,50 @@ export type TransactionInsert = typeof transactions.$inferInsert;
 export type TransactionSelect = typeof transactions.$inferSelect;
 
 const clearTransactionCache = async () => {
-  await clearCacheByPattern(`transaction:*`);
-  await invalidateDashboardCache();
+  await Promise.all([
+    clearCacheByPattern("transaction:*"),
+    invalidateDashboardCache(),
+  ]);
 };
 
-export async function findTransactionsWithPagination(
+export const findTransactionsWithPagination = async (
   status: string,
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `transaction:search:${search}:status:${status}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `transaction:status:${status}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const searchCondition = search
-        ? or(
-            ilike(transactions.kdTransaksi, `%${search}%`),
-            ilike(members.nama, `%${search}%`),
-            ilike(librarians.nama, `%${search}%`),
-            ilike(books.judul, `%${search}%`),
-          )
-        : undefined;
+      const conditions = [];
 
-      const whereClause = and(
-        status === "Semua"
-          ? undefined
-          : eq(transactions.status, status as TransactionSelect["status"]),
-        searchCondition,
-      );
+      if (status !== "Semua") {
+        conditions.push(
+          eq(transactions.status, status as TransactionSelect["status"]),
+        );
+      }
 
-      const [data, countResult] = await Promise.all([
+      if (trimmedSearch) {
+        const searchPattern = `%${trimmedSearch}%`;
+        conditions.push(
+          or(
+            ilike(transactions.kdTransaksi, searchPattern),
+            ilike(members.nama, searchPattern),
+            ilike(librarians.nama, searchPattern),
+            ilike(books.judul, searchPattern),
+          ),
+        );
+      }
+
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: transactions.id,
@@ -71,27 +81,27 @@ export async function findTransactionsWithPagination(
           .where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findTransaction(
+export const findTransaction = async (
   id: string,
-): Promise<TransactionSelect | null> {
-  const result = await db
+): Promise<TransactionSelect | null> => {
+  const [transaction] = await db
     .select()
     .from(transactions)
     .where(eq(transactions.id, id))
     .limit(1);
-  return result[0] || null;
-}
+
+  return transaction ?? null;
+};
 
 export const insertTransaction = async (
   data: TransactionInsert,
 ): Promise<TransactionSelect> => {
-  const result = await db.insert(transactions).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(transactions).values(data).returning();
 
   if (created) {
     await clearTransactionCache();
@@ -104,33 +114,30 @@ export const updateTransactionById = async (
   id: string,
   data: Partial<TransactionInsert>,
 ): Promise<TransactionSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(transactions)
     .set(data)
     .where(eq(transactions.id, id))
     .returning();
 
-  const updated = result[0] || null;
-
   if (updated) {
     await clearTransactionCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
 export const removeTransactionById = async (
   id: string,
 ): Promise<TransactionSelect | null> => {
-  const result = await db
+  const [deleted] = await db
     .delete(transactions)
     .where(eq(transactions.id, id))
     .returning();
-  const deleted = result[0] || null;
 
   if (deleted) {
     await clearTransactionCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

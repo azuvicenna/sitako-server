@@ -4,10 +4,12 @@ import { transactionStatusEnum } from "@/db/schema";
 export const createTransactionSchema = z.object({
   bukuId: z
     .string({ message: "Buku wajib dipilih" })
-    .min(1, { message: "Buku tidak boleh kosong" }),
+    .trim()
+    .min(1, "Buku tidak boleh kosong"),
   pustakawanId: z
     .string({ message: "Pustakawan wajib dipilih" })
-    .min(1, { message: "Pustakawan tidak boleh kosong" }),
+    .trim()
+    .min(1, "Pustakawan tidak boleh kosong"),
   tglPinjam: z.coerce
     .date({ message: "Format tanggal pinjam tidak valid" })
     .optional(),
@@ -15,7 +17,9 @@ export const createTransactionSchema = z.object({
     .date({ message: "Format tanggal kembali tidak valid" })
     .optional(),
   status: z
-    .enum(transactionStatusEnum.enumValues, { message: "Status transaksi tidak valid" })
+    .enum(transactionStatusEnum.enumValues, {
+      message: "Status transaksi tidak valid",
+    })
     .default("Menunggu Persetujuan"),
 });
 
@@ -25,7 +29,9 @@ export const returnTransactionSchema = z.object({
    * Hanya relevan jika buku SUDAH melewati tanggal kembali (terlambat).
    * Jika buku belum terlambat, field ini diabaikan.
    */
-  isBukuHilang: z.boolean({ message: "Status kehilangan buku wajib diisi (true/false)" }).default(false),
+  isBukuHilang: z
+    .boolean({ message: "Status kehilangan buku wajib diisi (true/false)" })
+    .default(false),
 });
 
 export type CreateTransaction = z.infer<typeof createTransactionSchema>;

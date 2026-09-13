@@ -1,4 +1,4 @@
-import { count, eq, ilike, desc } from "drizzle-orm";
+import { count, desc, eq, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { shelves } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
@@ -8,26 +8,27 @@ export type ShelfInsert = typeof shelves.$inferInsert;
 export type ShelfSelect = typeof shelves.$inferSelect;
 
 const clearShelfCache = async () => {
-  await clearCacheByPattern(`shelf:*`);
+  await clearCacheByPattern("shelf:*");
 };
 
-export async function findShelvesWithPagination(
+export const findShelvesWithPagination = async (
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `shelf:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `shelf:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const whereClause = search
-        ? ilike(shelves.namaRak, `%${search}%`)
+      const whereClause = trimmedSearch
+        ? ilike(shelves.namaRak, `%${trimmedSearch}%`)
         : undefined;
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select()
           .from(shelves)
@@ -38,23 +39,23 @@ export async function findShelvesWithPagination(
         db.select({ total: count() }).from(shelves).where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findShelf(id: string): Promise<ShelfSelect | null> {
-  const result = await db
+export const findShelf = async (id: string): Promise<ShelfSelect | null> => {
+  const [shelf] = await db
     .select()
     .from(shelves)
     .where(eq(shelves.id, id))
     .limit(1);
-  return result[0] || null;
-}
+
+  return shelf ?? null;
+};
 
 export const insertShelf = async (data: ShelfInsert): Promise<ShelfSelect> => {
-  const result = await db.insert(shelves).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(shelves).values(data).returning();
 
   if (created) {
     await clearShelfCache();
@@ -67,30 +68,30 @@ export const updateShelfById = async (
   id: string,
   data: Partial<ShelfInsert>,
 ): Promise<ShelfSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(shelves)
     .set(data)
     .where(eq(shelves.id, id))
     .returning();
 
-  const updated = result[0] || null;
-
   if (updated) {
     await clearShelfCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
 export const removeShelfById = async (
   id: string,
 ): Promise<ShelfSelect | null> => {
-  const result = await db.delete(shelves).where(eq(shelves.id, id)).returning();
-  const deleted = result[0] || null;
+  const [deleted] = await db
+    .delete(shelves)
+    .where(eq(shelves.id, id))
+    .returning();
 
   if (deleted) {
     await clearShelfCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

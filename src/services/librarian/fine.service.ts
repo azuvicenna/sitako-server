@@ -4,25 +4,28 @@ import {
   findFine,
   removeFineById,
   findFinesWithPagination,
-  FineInsert,
+  type FineInsert,
 } from "@/repositories/librarian/fine.repository";
-import { CreateFine, UpdateFine } from "@/validations/librarian/fine.schema";
+import type {
+  CreateFine,
+  UpdateFine,
+} from "@/validations/librarian/fine.schema";
 
 export const getFinesWithPagination = async (
   page: number,
   limit: number,
   search: string,
 ) => {
-  return await findFinesWithPagination(page, limit, search);
+  return findFinesWithPagination(page, limit, search);
 };
 
 export const getFineById = async (id: string) => {
-  return await findFine(id);
+  return findFine(id);
 };
 
 export const createNewFine = async (payload: CreateFine) => {
-  const fineData = { ...payload } as FineInsert;
-  return await insertFine(fineData);
+  const fineData: FineInsert = { ...payload };
+  return insertFine(fineData);
 };
 
 export const updateExistingFine = async (id: string, payload: UpdateFine) => {
@@ -33,13 +36,13 @@ export const updateExistingFine = async (id: string, payload: UpdateFine) => {
     return existingFine;
   }
 
-  const updateData = { ...payload } as Partial<FineInsert>;
-  return await updateFineById(id, updateData);
+  const updateData: Partial<FineInsert> = { ...payload };
+  return updateFineById(id, updateData);
 };
 
 export const deleteExistingFine = async (id: string) => {
   const existingFine = await findFine(id);
   if (!existingFine) return null;
 
-  return await removeFineById(id);
+  return removeFineById(id);
 };

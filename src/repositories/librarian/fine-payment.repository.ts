@@ -1,11 +1,11 @@
-import { count, eq, or, ilike, desc, sql } from "drizzle-orm";
+import { count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  books,
   finePayments,
   librarians,
   members,
   transactions,
-  books,
 } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 import { clearCacheByPattern } from "@/utils/core/cache";
@@ -14,37 +14,39 @@ export type FinePaymentInsert = typeof finePayments.$inferInsert;
 export type FinePaymentSelect = typeof finePayments.$inferSelect;
 
 const clearFinePaymentCache = async () => {
-  await clearCacheByPattern(`fine-payment:*`);
+  await clearCacheByPattern("fine-payment:*");
 };
 
-export async function findFinePaymentsWithPagination(
+export const findFinePaymentsWithPagination = async (
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `fine-payment:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `fine-payment:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const whereClause = search
+      const searchPattern = `%${trimmedSearch}%`;
+      const whereClause = trimmedSearch
         ? or(
-            ilike(sql`CAST(${finePayments.hargaDenda} AS TEXT)`, `%${search}%`),
-            ilike(sql`CAST(${finePayments.totalDenda} AS TEXT)`, `%${search}%`),
+            ilike(sql`CAST(${finePayments.hargaDenda} AS TEXT)`, searchPattern),
+            ilike(sql`CAST(${finePayments.totalDenda} AS TEXT)`, searchPattern),
             ilike(
               sql`CAST(${finePayments.metodePembayaran} AS TEXT)`,
-              `%${search}%`,
+              searchPattern,
             ),
-            ilike(members.nama, `%${search}%`),
-            ilike(librarians.nama, `%${search}%`),
-            ilike(transactions.kdTransaksi, `%${search}%`),
-            ilike(books.judul, `%${search}%`),
+            ilike(members.nama, searchPattern),
+            ilike(librarians.nama, searchPattern),
+            ilike(transactions.kdTransaksi, searchPattern),
+            ilike(books.judul, searchPattern),
           )
         : undefined;
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: finePayments.id,
@@ -83,27 +85,27 @@ export async function findFinePaymentsWithPagination(
           .where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findFinePayment(
+export const findFinePayment = async (
   id: string,
-): Promise<FinePaymentSelect | null> {
-  const result = await db
+): Promise<FinePaymentSelect | null> => {
+  const [payment] = await db
     .select()
     .from(finePayments)
     .where(eq(finePayments.id, id))
     .limit(1);
-  return result[0] || null;
-}
+
+  return payment ?? null;
+};
 
 export const insertFinePayment = async (
   data: FinePaymentInsert,
 ): Promise<FinePaymentSelect> => {
-  const result = await db.insert(finePayments).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(finePayments).values(data).returning();
 
   if (created) {
     await clearFinePaymentCache();
@@ -116,13 +118,11 @@ export const updateFinePaymentById = async (
   id: string,
   data: Partial<FinePaymentInsert>,
 ): Promise<FinePaymentSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(finePayments)
     .set(data)
     .where(eq(finePayments.id, id))
     .returning();
-
-  const updated = result[0] || null;
 
   if (updated) {
     await clearFinePaymentCache();
@@ -134,11 +134,10 @@ export const updateFinePaymentById = async (
 export const removeFinePaymentById = async (
   id: string,
 ): Promise<FinePaymentSelect | null> => {
-  const result = await db
+  const [deleted] = await db
     .delete(finePayments)
     .where(eq(finePayments.id, id))
     .returning();
-  const deleted = result[0] || null;
 
   if (deleted) {
     await clearFinePaymentCache();
@@ -147,11 +146,14 @@ export const removeFinePaymentById = async (
   return deleted;
 };
 
-export const findPaymentByTripayReference = async (reference: string): Promise<FinePaymentSelect | null> => {
-  const result = await db
+export const findPaymentByTripayReference = async (
+  reference: string,
+): Promise<FinePaymentSelect | null> => {
+  const [payment] = await db
     .select()
     .from(finePayments)
     .where(eq(finePayments.tripayReference, reference))
     .limit(1);
-  return result[0] || null;
+
+  return payment ?? null;
 };

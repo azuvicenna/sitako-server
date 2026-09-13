@@ -1,7 +1,7 @@
-import { sendError, sendSuccess } from "@/utils/core/handler";
 import { Request, Response } from "express";
 import * as librarianService from "@/services/librarian/librarian.service";
 import * as memberService from "@/services/librarian/member.service";
+import { sendError, sendFail, sendSuccess } from "@/utils/core/handler";
 import {
   imageFileSchema,
   updateLibrarianSchema,
@@ -10,15 +10,20 @@ import { updateMemberSchema } from "@/validations/librarian/member.schema";
 
 export const getMyProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id as string;
-    const userRole = req.user?.role as string;
+    const userId = req.user?.id;
+    const role = req.user?.role;
 
-    let result;
+    if (!userId || !role) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+    }
 
-    if (userRole === "Pustakawan") {
-      result = await librarianService.getLibrarianById(userId);
-    } else {
-      result = await memberService.getMemberById(userId);
+    const result =
+      role === "Pustakawan"
+        ? await librarianService.getLibrarianById(userId)
+        : await memberService.getMemberById(userId);
+
+    if (!result) {
+      return sendFail(res, 404, "Profil tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -29,28 +34,32 @@ export const getMyProfile = async (req: Request, res: Response) => {
 
 export const updateMyProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id as string;
-    const userRole = req.user?.role as string;
+    const userId = req.user?.id;
+    const role = req.user?.role;
 
-    let result;
+    if (!userId || !role) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+    }
+
     const validatedFile = req.file
       ? imageFileSchema.parse(req.file)
       : undefined;
 
-    if (userRole === "Pustakawan") {
-      const validatedBody = updateLibrarianSchema.parse(req.body);
-      result = await librarianService.updateExistingLibrarian(
-        userId,
-        validatedBody,
-        validatedFile,
-      );
-    } else {
-      const validatedBody = updateMemberSchema.parse(req.body);
-      result = await memberService.updateExistingMember(
-        userId,
-        validatedBody,
-        validatedFile,
-      );
+    const result =
+      role === "Pustakawan"
+        ? await librarianService.updateExistingLibrarian(
+            userId,
+            updateLibrarianSchema.parse(req.body),
+            validatedFile,
+          )
+        : await memberService.updateExistingMember(
+            userId,
+            updateMemberSchema.parse(req.body),
+            validatedFile,
+          );
+
+    if (!result) {
+      return sendFail(res, 404, "Profil tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Profil berhasil diperbarui");

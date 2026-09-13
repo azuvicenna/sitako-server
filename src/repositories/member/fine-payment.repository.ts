@@ -1,38 +1,39 @@
-import { count, eq, or, ilike, desc, and, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  books,
   finePayments,
   librarians,
   members,
   transactions,
-  books,
 } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 
 export type FinePaymentSelect = typeof finePayments.$inferSelect;
 
-export async function findFinePaymentsWithPagination(
+export const findFinePaymentsWithPagination = async (
   anggotaId: string,
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `member-fine-payment:anggota:${anggotaId}:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `member-fine-payment:anggota:${anggotaId}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const searchCondition = search
+      const searchCondition = trimmedSearch
         ? or(
             ilike(
               sql`CAST(${finePayments.metodePembayaran} AS TEXT)`,
-              `%${search}%`,
+              `%${trimmedSearch}%`,
             ),
-            ilike(transactions.kdTransaksi, `%${search}%`),
-            ilike(books.judul, `%${search}%`),
-            ilike(librarians.nama, `%${search}%`),
+            ilike(transactions.kdTransaksi, `%${trimmedSearch}%`),
+            ilike(books.judul, `%${trimmedSearch}%`),
+            ilike(librarians.nama, `%${trimmedSearch}%`),
           )
         : undefined;
 
@@ -41,7 +42,7 @@ export async function findFinePaymentsWithPagination(
         searchCondition,
       );
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: finePayments.id,
@@ -79,17 +80,13 @@ export async function findFinePaymentsWithPagination(
           .where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-/**
- * Mengambil detail satu pembayaran denda dengan ownership guard —
- * anggota hanya bisa melihat pembayaran miliknya sendiri.
- */
-export async function findFinePayment(id: string, anggotaId: string) {
-  const result = await db
+export const findFinePayment = async (id: string, anggotaId: string) => {
+  const [payment] = await db
     .select({
       id: finePayments.id,
       hargaDenda: finePayments.hargaDenda,
@@ -109,14 +106,8 @@ export async function findFinePayment(id: string, anggotaId: string) {
     .innerJoin(members, eq(finePayments.anggotaId, members.id))
     .innerJoin(transactions, eq(finePayments.transaksiId, transactions.id))
     .innerJoin(books, eq(transactions.bukuId, books.id))
-    .where(
-      and(
-        eq(finePayments.id, id),
-        // Ownership guard: pastikan pembayaran ini memang milik anggota yang request
-        eq(finePayments.anggotaId, anggotaId),
-      ),
-    )
+    .where(and(eq(finePayments.id, id), eq(finePayments.anggotaId, anggotaId)))
     .limit(1);
 
-  return result[0] || null;
-}
+  return payment ?? null;
+};

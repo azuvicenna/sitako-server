@@ -1,25 +1,25 @@
 import {
-  BookmarkInsert,
   findBook,
   findDigitalBook,
   insertBookmark,
   removeBookmarkById,
+  type BookmarkInsert,
 } from "@/repositories/member/library.repository";
-import { CreateBookmark } from "@/validations/member/bookmark.schema";
+import type { CreateBookmark } from "@/validations/member/bookmark.schema";
 
 export const getBookById = async (bookId: string) => {
-  return await findBook(bookId);
+  return findBook(bookId);
 };
 
 export const getDigitalBookById = async (bookId: string) => {
-  return await findDigitalBook(bookId);
+  return findDigitalBook(bookId);
 };
 
 export const createNewBookmark = async (payload: CreateBookmark) => {
-  const bookmarkData = { ...payload } as BookmarkInsert;
-  return await insertBookmark(bookmarkData);
+  const bookmarkData: BookmarkInsert = { ...payload };
+  return insertBookmark(bookmarkData);
 };
 
 export const deleteExistingBookmark = async (bookmarkId: string) => {
-  return await removeBookmarkById(bookmarkId);
+  return removeBookmarkById(bookmarkId);
 };

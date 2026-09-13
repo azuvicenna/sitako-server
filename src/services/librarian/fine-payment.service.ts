@@ -4,9 +4,9 @@ import {
   findFinePayment,
   removeFinePaymentById,
   findFinePaymentsWithPagination,
-  FinePaymentInsert,
+  type FinePaymentInsert,
 } from "@/repositories/librarian/fine-payment.repository";
-import {
+import type {
   CreateFinePayment,
   UpdateFinePayment,
 } from "@/validations/librarian/fine-payment.schema";
@@ -16,20 +16,21 @@ export const getFinePaymentsWithPagination = async (
   limit: number,
   search: string,
 ) => {
-  return await findFinePaymentsWithPagination(page, limit, search);
+  return findFinePaymentsWithPagination(page, limit, search);
 };
 
 export const getFinePaymentById = async (id: string) => {
-  return await findFinePayment(id);
+  return findFinePayment(id);
 };
 
 export const createNewFinePayment = async (payload: CreateFinePayment) => {
-  const paymentData = { 
-    ...payload, 
+  const paymentData: FinePaymentInsert = {
+    ...payload,
     paymentStatus: "PAID",
-    tglBayar: payload.tglBayar || new Date()
-  } as FinePaymentInsert;
-  return await insertFinePayment(paymentData);
+    tglBayar: payload.tglBayar ?? new Date(),
+  };
+
+  return insertFinePayment(paymentData);
 };
 
 export const updateExistingFinePayment = async (
@@ -43,10 +44,10 @@ export const updateExistingFinePayment = async (
     return existingPayment;
   }
 
-  const updateData = { ...payload } as Partial<FinePaymentInsert>;
-  return await updateFinePaymentById(id, updateData);
+  const updateData: Partial<FinePaymentInsert> = { ...payload };
+  return updateFinePaymentById(id, updateData);
 };
 
 export const deleteExistingFinePayment = async (id: string) => {
-  return await removeFinePaymentById(id);
+  return removeFinePaymentById(id);
 };

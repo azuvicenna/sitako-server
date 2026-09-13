@@ -1,27 +1,35 @@
+import { randomUUID } from "crypto";
+import { readFile, unlink, writeFile } from "fs/promises";
+import path from "path";
 import * as typst from "typst";
-import * as fs from "fs/promises";
-import * as path from "path";
 
 export async function compileTypstFile(
   templateName: string,
   data: Record<string, string>,
 ): Promise<string> {
-  const filePath = path.join(process.cwd(), "src", "templates", templateName);
-  const outputPath = filePath.replace(/\.typ$/, `_${Date.now()}.pdf`);
+  const templatesDir = path.resolve(process.cwd(), "src", "templates");
+  const filePath = path.resolve(templatesDir, templateName);
 
-  let content = await fs.readFile(filePath, "utf-8");
-
-  for (const [key, value] of Object.entries(data)) {
-    content = content.replace(new RegExp(`#${key}`, "g"), value);
+  if (!filePath.startsWith(templatesDir)) {
+    throw new Error("Akses template tidak valid");
   }
 
-  const tempFilePath = filePath.replace(/\.typ$/, `_${Date.now()}_temp.typ`);
-  await fs.writeFile(tempFilePath, content, "utf-8");
+  let content = await readFile(filePath, "utf-8");
+
+  for (const [key, value] of Object.entries(data)) {
+    content = content.replaceAll(`#${key}`, () => value);
+  }
+
+  const fileId = `${Date.now()}_${randomUUID().slice(0, 8)}`;
+  const outputPath = filePath.replace(/\.typ$/, `_${fileId}.pdf`);
+  const tempFilePath = filePath.replace(/\.typ$/, `_${fileId}_temp.typ`);
+
+  await writeFile(tempFilePath, content, "utf-8");
 
   try {
     await typst.compile(tempFilePath, outputPath);
     return outputPath;
   } finally {
-    await fs.unlink(tempFilePath).catch(() => {});
+    await unlink(tempFilePath).catch(() => {});
   }
 }

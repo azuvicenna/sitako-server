@@ -1,25 +1,25 @@
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { BookSelect } from "../librarian/book.repository";
 import { bookmarks, books } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import type { BookSelect } from "../librarian/book.repository";
 
 export type BookmarkInsert = typeof bookmarks.$inferInsert;
 export type BookmarkSelect = typeof bookmarks.$inferSelect;
 
-export async function findBook(bookId: string): Promise<BookSelect | null> {
-  const result = await db
+export const findBook = async (bookId: string): Promise<BookSelect | null> => {
+  const [book] = await db
     .select()
     .from(books)
     .where(eq(books.id, bookId))
     .limit(1);
 
-  return result[0] || null;
-}
+  return book ?? null;
+};
 
-export async function findDigitalBook(
+export const findDigitalBook = async (
   bookId: string,
-): Promise<Pick<BookSelect, "id" | "cover" | "file" | "createdAt"> | null> {
-  const result = await db
+): Promise<Pick<BookSelect, "id" | "cover" | "file" | "createdAt"> | null> => {
+  const [book] = await db
     .select({
       id: books.id,
       cover: books.cover,
@@ -30,24 +30,24 @@ export async function findDigitalBook(
     .where(and(eq(books.id, bookId), eq(books.tipeBuku, "Digital")))
     .limit(1);
 
-  return result[0] || null;
-}
+  return book ?? null;
+};
 
 export const insertBookmark = async (
   data: BookmarkInsert,
 ): Promise<BookmarkSelect> => {
-  const result = await db.insert(bookmarks).values(data).returning();
+  const [created] = await db.insert(bookmarks).values(data).returning();
 
-  return result[0];
+  return created;
 };
 
 export const removeBookmarkById = async (
   bookmarkId: string,
 ): Promise<BookmarkSelect | null> => {
-  const result = await db
+  const [deleted] = await db
     .delete(bookmarks)
     .where(eq(bookmarks.id, bookmarkId))
     .returning();
 
-  return result[0] || null;
+  return deleted ?? null;
 };

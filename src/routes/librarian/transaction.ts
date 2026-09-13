@@ -1,4 +1,12 @@
 import { Router } from "express";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
+import { validate } from "@/middlewares/validate.middleware";
+import { paginationSchema } from "@/validations/utils/pagination.schema";
+import {
+  createTransactionSchema,
+  updateTransactionSchema,
+} from "@/validations/librarian/transaction.schema";
 import {
   createTransaction,
   deleteTransaction,
@@ -6,15 +14,8 @@ import {
   showTransaction,
   updateTransaction,
 } from "@/controllers/librarian/transaction.controller";
-import { validate } from "@/middlewares/validate.middleware";
-import { paginationSchema } from "@/validations/utils/pagination.schema";
-import { verifyAuth } from "@/middlewares/auth.middleware";
-import {
-  createTransactionSchema,
-  updateTransactionSchema,
-} from "@/validations/librarian/transaction.schema";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 

@@ -2,113 +2,114 @@ import { db } from "@/db";
 import { transactions, books, finePayments } from "@/db/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
+const MAX_ACTIVE_TRANSACTIONS = 3;
+
+export interface ValidationResult {
+  success: boolean;
+  message?: string;
+}
+
 export const validateTransactionCreation = async (
-  anggotaId: string,
-  bukuId: string,
-) => {
-  // 1. Cek status denda (Terlambat, Tidak Mengembalikan)
+  memberId: string,
+  bookId: string,
+): Promise<ValidationResult> => {
   const penaltyTransactions = await db
-    .select({ id: transactions.id, status: transactions.status })
+    .select({
+      id: transactions.id,
+      status: transactions.status,
+      paidPaymentId: finePayments.id,
+    })
     .from(transactions)
+    .leftJoin(
+      finePayments,
+      and(
+        eq(finePayments.transaksiId, transactions.id),
+        eq(finePayments.paymentStatus, "PAID"),
+      ),
+    )
     .where(
       and(
-        eq(transactions.anggotaId, anggotaId),
+        eq(transactions.anggotaId, memberId),
         inArray(transactions.status, ["Terlambat", "Tidak Mengembalikan"]),
       ),
     );
 
-  if (penaltyTransactions.length > 0) {
-    for (const trx of penaltyTransactions) {
-      if (trx.status === "Terlambat") {
-        // Jika terlambat, maka harus selalu diblokir sampai pustakawan
-        // mengonfirmasi pengembalian fisik dengan mengubah status ke "Dikembalikan".
-        return {
-          success: false,
-          message:
-            "Member memiliki buku yang terlambat dikembalikan (fisik belum dikonfirmasi)",
-        };
-      }
-
-      if (trx.status === "Tidak Mengembalikan") {
-        // Jika buku hilang, cek apakah dendanya sudah lunas
-        const payment = await db
-          .select({ id: finePayments.id })
-          .from(finePayments)
-          .where(
-            and(
-              eq(finePayments.transaksiId, trx.id),
-              eq(finePayments.paymentStatus, "PAID"),
-            ),
-          )
-          .limit(1);
-
-        if (payment.length === 0) {
-          return {
-            success: false,
-            message:
-              "Member memiliki denda buku hilang yang belum dibayar lunas",
-          };
-        }
-      }
-    }
+  const lateTransaction = penaltyTransactions.find(
+    (trx) => trx.status === "Terlambat",
+  );
+  if (lateTransaction) {
+    return {
+      success: false,
+      message:
+        "Member memiliki buku yang terlambat dikembalikan (fisik belum dikonfirmasi)",
+    };
   }
 
-  // 2. Cek ketersediaan buku
-  const bookData = await db
-    .select({ jumlahStok: books.jumlahStok })
-    .from(books)
-    .where(eq(books.id, bukuId))
-    .limit(1);
+  const unpaidLostTransaction = penaltyTransactions.find(
+    (trx) => trx.status === "Tidak Mengembalikan" && !trx.paidPaymentId,
+  );
+  if (unpaidLostTransaction) {
+    return {
+      success: false,
+      message: "Member memiliki denda buku hilang yang belum dibayar lunas",
+    };
+  }
 
-  if (bookData.length === 0) {
+  const [bookResult, borrowedResult, activeTransactionsResult] =
+    await Promise.all([
+      db
+        .select({ stock: books.jumlahStok })
+        .from(books)
+        .where(eq(books.id, bookId))
+        .limit(1),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.bukuId, bookId),
+            inArray(transactions.status, [
+              "Menunggu Diambil",
+              "Dipinjam",
+              "Terlambat",
+              "Tidak Mengembalikan",
+            ]),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.anggotaId, memberId),
+            inArray(transactions.status, [
+              "Menunggu Persetujuan",
+              "Menunggu Diambil",
+              "Dipinjam",
+            ]),
+          ),
+        ),
+    ]);
+
+  if (bookResult.length === 0) {
     return { success: false, message: "Buku tidak ditemukan" };
   }
-  const jumlahStok = bookData[0].jumlahStok;
 
-  const borrowedBooksQuery = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.bukuId, bukuId),
-        inArray(transactions.status, [
-          "Menunggu Diambil",
-          "Dipinjam",
-          "Terlambat",
-          "Tidak Mengembalikan",
-        ]),
-      ),
-    );
+  const totalStock = bookResult[0].stock;
+  const totalBorrowed = Number(borrowedResult[0]?.count ?? 0);
 
-  const totalBorrowed = Number(borrowedBooksQuery[0]?.count || 0);
-
-  if (jumlahStok <= totalBorrowed) {
+  if (totalStock <= totalBorrowed) {
     return { success: false, message: "Stok buku habis" };
   }
 
-  // 3. Cek maksimum pinjam
-  const activeTransactionsQuery = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.anggotaId, anggotaId),
-        inArray(transactions.status, [
-          "Menunggu Persetujuan",
-          "Menunggu Diambil",
-          "Dipinjam",
-        ]),
-      ),
-    );
-
   const activeTransactionsCount = Number(
-    activeTransactionsQuery[0]?.count || 0,
+    activeTransactionsResult[0]?.count ?? 0,
   );
 
-  if (activeTransactionsCount >= 3) {
+  if (activeTransactionsCount >= MAX_ACTIVE_TRANSACTIONS) {
     return {
       success: false,
-      message: "Maksimum pinjam tercapai (maksimal 3 transaksi aktif)",
+      message: `Maksimum pinjam tercapai (maksimal ${MAX_ACTIVE_TRANSACTIONS} transaksi aktif)`,
     };
   }
 

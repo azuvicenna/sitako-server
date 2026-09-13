@@ -1,15 +1,33 @@
-import jwt from "jsonwebtoken";
+import jwt, {
+  type JwtPayload,
+  type Secret,
+  type SignOptions,
+} from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+export interface UserPayload extends JwtPayload {
+  id: string;
+  role: string;
+}
 
-export const generateToken = (payload: object): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
+const JWT_SECRET: Secret = process.env.JWT_SECRET || "";
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+
+export const generateToken = <T extends object>(
+  payload: T,
+  options?: SignOptions,
+): string => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d", ...options });
 };
 
-export const verifyToken = (payload: string): any => {
+export const verifyToken = <T = UserPayload>(token: string): T | null => {
   try {
-    return jwt.verify(payload, JWT_SECRET);
-  } catch (error) {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded === "string") return null;
+    return decoded as T;
+  } catch {
     return null;
   }
 };

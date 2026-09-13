@@ -7,7 +7,7 @@ import {
   uniqueIndex,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { generateId } from "../utils/generators/ulid";
+import { generateId } from "@/utils/generators/ulid";
 
 export const bookTypeEnum = pgEnum("tipe_buku_enum", ["Fisik", "Digital"]);
 export const fineTypeEnum = pgEnum("tipe_denda_enum", ["Terlambat", "Hilang"]);
@@ -28,47 +28,45 @@ export const paymentMethodEnum = pgEnum("metode_pembayaran_enum", [
   "Tunai",
   "Non-Tunai",
 ]);
+export const paymentStatusEnum = pgEnum("status_pembayaran_enum", [
+  "UNPAID",
+  "PAID",
+  "EXPIRED",
+  "FAILED",
+]);
 
 export const librarians = pgTable("librarians", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   nama: text("nama").notNull(),
   nip: text("nip").notNull(),
   email: text("email").notNull(),
   password: text("password").notNull(),
   telepon: text("telepon").notNull(),
   foto: text("foto").notNull(),
-  status_aktif: boolean("status_aktif").default(true),
+  status_aktif: boolean("status_aktif").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const members = pgTable("members", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   nama: text("nama").notNull(),
   nis: text("nis").notNull(),
   email: text("email").notNull(),
   password: text("password").notNull(),
   telepon: text("telepon").notNull(),
   foto: text("foto").notNull(),
-  status_aktif: boolean("status_aktif").default(true),
+  status_aktif: boolean("status_aktif").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const shelves = pgTable("shelves", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   namaRak: text("nama_rak").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const books = pgTable("books", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   judul: text("judul").notNull(),
   penulis: text("penulis").notNull(),
   isbn: text("isbn").notNull(),
@@ -85,9 +83,7 @@ export const books = pgTable("books", {
 export const stacks = pgTable(
   "stacks",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => generateId()),
+    id: text("id").primaryKey().$defaultFn(generateId),
     rakId: text("rak_id")
       .notNull()
       .references(() => shelves.id, {
@@ -108,9 +104,7 @@ export const stacks = pgTable(
 );
 
 export const bookmarks = pgTable("bookmarks", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   bukuId: text("buku_id")
     .notNull()
     .references(() => books.id, {
@@ -127,9 +121,7 @@ export const bookmarks = pgTable("bookmarks", {
 });
 
 export const fines = pgTable("fines", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   bukuId: text("buku_id")
     .notNull()
     .references(() => books.id, {
@@ -145,9 +137,7 @@ export const fines = pgTable("fines", {
 });
 
 export const transactions = pgTable("transactions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
+  id: text("id").primaryKey().$defaultFn(generateId),
   bukuId: text("buku_id")
     .notNull()
     .references(() => books.id, {
@@ -175,22 +165,12 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const paymentStatusEnum = pgEnum("status_pembayaran_enum", [
-  "UNPAID",
-  "PAID",
-  "EXPIRED",
-  "FAILED",
-]);
-
 export const finePayments = pgTable("payments", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => generateId()),
-  pustakawanId: text("pustakawan_id")
-    .references(() => librarians.id, {
-      onDelete: "restrict",
-      onUpdate: "restrict",
-    }),
+  id: text("id").primaryKey().$defaultFn(generateId),
+  pustakawanId: text("pustakawan_id").references(() => librarians.id, {
+    onDelete: "restrict",
+    onUpdate: "restrict",
+  }),
   anggotaId: text("anggota_id")
     .notNull()
     .references(() => members.id, {

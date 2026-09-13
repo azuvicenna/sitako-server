@@ -4,25 +4,28 @@ import {
   findShelf,
   removeShelfById,
   findShelvesWithPagination,
-  ShelfInsert,
+  type ShelfInsert,
 } from "@/repositories/librarian/shelf.repository";
-import { CreateShelf, UpdateShelf } from "@/validations/librarian/shelf.schema";
+import type {
+  CreateShelf,
+  UpdateShelf,
+} from "@/validations/librarian/shelf.schema";
 
 export const getShelvesWithPagination = async (
   page: number,
   limit: number,
   search: string,
 ) => {
-  return await findShelvesWithPagination(page, limit, search);
+  return findShelvesWithPagination(page, limit, search);
 };
 
 export const getShelfById = async (id: string) => {
-  return await findShelf(id);
+  return findShelf(id);
 };
 
 export const createNewShelf = async (payload: CreateShelf) => {
-  const shelfData = { ...payload } as ShelfInsert;
-  return await insertShelf(shelfData);
+  const shelfData: ShelfInsert = { ...payload };
+  return insertShelf(shelfData);
 };
 
 export const updateExistingShelf = async (id: string, payload: UpdateShelf) => {
@@ -33,10 +36,10 @@ export const updateExistingShelf = async (id: string, payload: UpdateShelf) => {
     return existingShelf;
   }
 
-  const updateData = { ...payload } as Partial<ShelfInsert>;
-  return await updateShelfById(id, updateData);
+  const updateData: Partial<ShelfInsert> = { ...payload };
+  return updateShelfById(id, updateData);
 };
 
 export const deleteExistingShelf = async (id: string) => {
-  return await removeShelfById(id);
+  return removeShelfById(id);
 };

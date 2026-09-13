@@ -1,4 +1,4 @@
-import { count, eq, and, ilike, or, desc } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { books } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
@@ -8,36 +8,37 @@ import { invalidateDashboardCache } from "./dashboard.repository";
 export type BookInsert = typeof books.$inferInsert;
 export type BookSelect = typeof books.$inferSelect;
 
-const clearBookCache = async (bookType?: string) => {
+const clearBookCache = async (bookType?: BookSelect["tipeBuku"]) => {
   const pattern = bookType ? `book:book-type:${bookType}:*` : `book:*`;
-  await clearCacheByPattern(pattern);
-  await invalidateDashboardCache();
+  await Promise.all([clearCacheByPattern(pattern), invalidateDashboardCache()]);
 };
 
-export async function findBooksWithPagination(
-  bookType: string,
+export const findBooksWithPagination = async (
+  bookType: BookSelect["tipeBuku"],
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `book:book-type:${bookType}:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `book:book-type:${bookType}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
     page,
     limit,
     async (offset, limit) => {
-      const whereClause = search
+      const searchPattern = `%${trimmedSearch}%`;
+      const whereClause = trimmedSearch
         ? and(
-            eq(books.tipeBuku, bookType as BookSelect["tipeBuku"]),
+            eq(books.tipeBuku, bookType),
             or(
-              ilike(books.judul, `%${search}%`),
-              ilike(books.penulis, `%${search}%`),
-              ilike(books.penerbit, `%${search}%`),
-              ilike(books.isbn, `%${search}%`),
+              ilike(books.judul, searchPattern),
+              ilike(books.penulis, searchPattern),
+              ilike(books.penerbit, searchPattern),
+              ilike(books.isbn, searchPattern),
             ),
           )
-        : eq(books.tipeBuku, bookType as BookSelect["tipeBuku"]);
+        : eq(books.tipeBuku, bookType);
 
       const [data, countResult] = await Promise.all([
         db
@@ -53,16 +54,16 @@ export async function findBooksWithPagination(
       return { data, total: Number(countResult[0]?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findBook(id: string): Promise<BookSelect | null> {
-  const result = await db.select().from(books).where(eq(books.id, id)).limit(1);
-  return result[0] || null;
-}
+export const findBook = async (id: string): Promise<BookSelect | null> => {
+  const [book] = await db.select().from(books).where(eq(books.id, id)).limit(1);
+
+  return book ?? null;
+};
 
 export const insertBook = async (data: BookInsert): Promise<BookSelect> => {
-  const result = await db.insert(books).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(books).values(data).returning();
 
   if (created) {
     await clearBookCache(created.tipeBuku);
@@ -75,12 +76,11 @@ export const updateBookById = async (
   id: string,
   data: Partial<BookInsert>,
 ): Promise<BookSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(books)
     .set(data)
     .where(eq(books.id, id))
     .returning();
-  const updated = result[0] || null;
 
   if (updated) {
     await clearBookCache();
@@ -92,8 +92,7 @@ export const updateBookById = async (
 export const removeBookById = async (
   id: string,
 ): Promise<BookSelect | null> => {
-  const result = await db.delete(books).where(eq(books.id, id)).returning();
-  const deleted = result[0] || null;
+  const [deleted] = await db.delete(books).where(eq(books.id, id)).returning();
 
   if (deleted) {
     await clearBookCache(deleted.tipeBuku);

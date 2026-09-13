@@ -3,7 +3,8 @@ import { z } from "zod";
 export const createShelfSchema = z.object({
   namaRak: z
     .string({ message: "Nama rak wajib diisi" })
-    .min(1, { message: "Nama rak tidak boleh kosong" }),
+    .trim()
+    .min(1, "Nama rak tidak boleh kosong"),
 });
 
 export const updateShelfSchema = createShelfSchema.partial();

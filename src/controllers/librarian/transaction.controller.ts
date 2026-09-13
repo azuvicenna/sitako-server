@@ -1,31 +1,34 @@
 import { Request, Response } from "express";
 import * as transactionService from "@/services/librarian/transaction.service";
 import { validateTransactionCreation } from "@/services/librarian/transaction-validation.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 import { transactionStatusEnum } from "@/db/schema";
 
+const VALID_STATUSES = ["Semua", ...transactionStatusEnum.enumValues] as const;
+type TransactionStatusFilter = (typeof VALID_STATUSES)[number];
+
+const isValidStatus = (status: unknown): status is TransactionStatusFilter => {
+  return (
+    typeof status === "string" &&
+    (VALID_STATUSES as readonly string[]).includes(status)
+  );
+};
 
 export const getTransactionsHandler = async (req: Request, res: Response) => {
   try {
-    const status = req.query.status as string;
+    const { status } = req.query;
 
-    if (
-      !status ||
-      (status !== "Semua" &&
-        !transactionStatusEnum.enumValues.includes(status as any))
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Status transaksi tidak valid",
-      });
+    if (!isValidStatus(status)) {
+      return sendFail(res, 400, "Status transaksi tidak valid");
     }
 
     const { page, limit, search } = getPaginationParams(req.query);
-
     const result = await transactionService.getTransactionsWithPagination(
       status,
       page,
@@ -41,22 +44,15 @@ export const getTransactionsHandler = async (req: Request, res: Response) => {
 
 export const showTransaction = async (req: Request, res: Response) => {
   try {
-    const transactionId = req.params.id as string;
+    const transactionId = resolveParam(req.params.id);
 
     if (!transactionId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID transaksi tidak valid",
-      });
+      return sendFail(res, 400, "ID transaksi tidak valid");
     }
 
     const result = await transactionService.getTransactionById(transactionId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data transaksi tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data transaksi tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -67,17 +63,21 @@ export const showTransaction = async (req: Request, res: Response) => {
 
 export const createTransaction = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
-    
-    const validationResult = await validateTransactionCreation(validatedBody.anggotaId, validatedBody.bukuId);
+    const body = req.body ?? {};
+
+    const validationResult = await validateTransactionCreation(
+      body.anggotaId,
+      body.bukuId,
+    );
     if (!validationResult.success) {
-      return res.status(400).json({
-        success: false,
-        message: validationResult.message,
-      });
+      return sendFail(
+        res,
+        400,
+        validationResult.message ?? "Validasi transaksi gagal",
+      );
     }
 
-    const result = await transactionService.createNewTransaction(validatedBody);
+    const result = await transactionService.createNewTransaction(body);
 
     return sendSuccess(res, result, "Transaksi berhasil dibuat");
   } catch (error) {
@@ -87,26 +87,19 @@ export const createTransaction = async (req: Request, res: Response) => {
 
 export const updateTransaction = async (req: Request, res: Response) => {
   try {
-    const transactionId = req.params.id as string;
+    const transactionId = resolveParam(req.params.id);
 
     if (!transactionId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID transaksi tidak valid",
-      });
+      return sendFail(res, 400, "ID transaksi tidak valid");
     }
 
-    const validatedBody = req.body;
     const result = await transactionService.updateExistingTransaction(
       transactionId,
-      validatedBody,
+      req.body ?? {},
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data transaksi tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data transaksi tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data transaksi berhasil diperbarui");
@@ -117,23 +110,17 @@ export const updateTransaction = async (req: Request, res: Response) => {
 
 export const deleteTransaction = async (req: Request, res: Response) => {
   try {
-    const transactionId = req.params.id as string;
+    const transactionId = resolveParam(req.params.id);
 
     if (!transactionId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID transaksi tidak valid",
-      });
+      return sendFail(res, 400, "ID transaksi tidak valid");
     }
 
     const result =
       await transactionService.deleteExistingTransaction(transactionId);
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data transaksi tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data transaksi tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data transaksi berhasil dihapus");

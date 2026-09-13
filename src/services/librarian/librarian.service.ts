@@ -7,10 +7,10 @@ import {
   findLibrarianRawById,
   removeLibrarianById,
   findLibrariansWithPagination,
-  LibrarianInsert,
+  type LibrarianInsert,
 } from "@/repositories/librarian/librarian.repository";
 import { deleteFile, uploadFile } from "@/utils/services/storage";
-import {
+import type {
   CreateLibrarian,
   UpdateLibrarian,
 } from "@/validations/librarian/librarian.schema";
@@ -18,54 +18,68 @@ import logger from "@/utils/core/logger";
 
 const extractFileKey = (url: string) => url.split("/").slice(-2).join("/");
 
+const safeDeleteFile = async (url?: string | null, label = "file") => {
+  if (!url) return;
+  try {
+    await deleteFile(extractFileKey(url));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to delete ${label} (${url}): ${message}`);
+  }
+};
+
+const uploadWithUniqueName = async (
+  folder: string,
+  file: Express.Multer.File,
+) => {
+  const ext = file.originalname.split(".").pop();
+  const filename = ext ? `${uuidv4()}.${ext}` : uuidv4();
+  return uploadFile(folder, file, filename);
+};
+
 export const getLibrariansWithPagination = async (
   statusActive: string,
   page: number,
   limit: number,
   search: string,
 ) => {
-  return await findLibrariansWithPagination(statusActive, page, limit, search);
+  return findLibrariansWithPagination(statusActive, page, limit, search);
 };
 
 export const getLibrarianById = async (id: string) => {
-  return await findLibrarianById(id);
+  return findLibrarianById(id);
 };
 
 export const createNewLibrarian = async (
   payload: CreateLibrarian,
-  fotoFile?: Express.Multer.File,
+  photoFile?: Express.Multer.File,
 ) => {
-  let fotoUrl = "";
-
-  if (fotoFile) {
-    const ext = fotoFile.originalname.split(".").pop();
-    fotoUrl = await uploadFile("profiles", fotoFile, `${uuidv4()}.${ext}`);
-  }
-
-  const hashedPassword = await bcrypt.hash(payload.password as string, 10);
-
-  const librarianData: LibrarianInsert = {
-    nama: payload.nama,
-    nip: payload.nip,
-    email: payload.email,
-    password: hashedPassword,
-    telepon: payload.telepon,
-    foto: fotoUrl,
-    // status_aktif sudah di-transform oleh Zod schema menjadi boolean
-    status_aktif: payload.status_aktif ?? true,
-  };
+  let photoUrl = "";
 
   try {
+    if (photoFile) {
+      photoUrl = await uploadWithUniqueName("profiles", photoFile);
+    }
+
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
+
+    const librarianData: LibrarianInsert = {
+      nama: payload.nama,
+      nip: payload.nip,
+      email: payload.email,
+      password: hashedPassword,
+      telepon: payload.telepon,
+      foto: photoUrl,
+      status_aktif: payload.status_aktif ?? true,
+    };
+
     const created = await insertLibrarian(librarianData);
-    const { password, ...resultWithoutPassword } = created;
-    return resultWithoutPassword;
+    const { password: _, ...librarianWithoutPassword } = created;
+
+    return librarianWithoutPassword;
   } catch (error) {
-    if (fotoUrl) {
-      await deleteFile(extractFileKey(fotoUrl)).catch((err) =>
-        logger.error(
-          `Failed to delete orphaned file ${fotoUrl}: ${err.message}`,
-        ),
-      );
+    if (photoUrl) {
+      await safeDeleteFile(photoUrl, "orphaned profile photo");
     }
     throw error;
   }
@@ -74,64 +88,54 @@ export const createNewLibrarian = async (
 export const updateExistingLibrarian = async (
   id: string,
   payload: UpdateLibrarian,
-  fotoFile?: Express.Multer.File,
+  photoFile?: Express.Multer.File,
 ) => {
   const existingLibrarian = await findLibrarianRawById(id);
   if (!existingLibrarian) return null;
 
   const updateData: Partial<LibrarianInsert> = { ...payload };
-
-  if (payload.password) {
-    updateData.password = await bcrypt.hash(payload.password, 10);
-  }
-
-  if (fotoFile) {
-    const ext = fotoFile.originalname.split(".").pop();
-    updateData.foto = await uploadFile(
-      "profiles",
-      fotoFile,
-      `${uuidv4()}.${ext}`,
-    );
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    return existingLibrarian;
-  }
+  let newPhotoUrl: string | undefined;
 
   try {
+    if (payload.password) {
+      updateData.password = await bcrypt.hash(payload.password, 10);
+    }
+
+    if (photoFile) {
+      newPhotoUrl = await uploadWithUniqueName("profiles", photoFile);
+      updateData.foto = newPhotoUrl;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      const { password: _, ...librarianWithoutPassword } = existingLibrarian;
+      return librarianWithoutPassword;
+    }
+
     const updated = await updateLibrarianById(id, updateData);
     if (!updated) return null;
 
-    if (fotoFile && existingLibrarian.foto) {
-      await deleteFile(extractFileKey(existingLibrarian.foto)).catch((err) =>
-        logger.error(`Failed to delete old profile file: ${err.message}`),
-      );
+    if (photoFile && existingLibrarian.foto) {
+      await safeDeleteFile(existingLibrarian.foto, "old profile photo");
     }
 
-    const { password, ...resultWithoutPassword } = updated;
-    return resultWithoutPassword;
+    const { password: _, ...librarianWithoutPassword } = updated;
+    return librarianWithoutPassword;
   } catch (error) {
-    if (fotoFile && updateData.foto) {
-      await deleteFile(extractFileKey(updateData.foto)).catch((err) =>
-        logger.error(
-          `Failed to delete orphaned file ${updateData.foto}: ${err.message}`,
-        ),
-      );
+    if (newPhotoUrl) {
+      await safeDeleteFile(newPhotoUrl, "orphaned profile photo");
     }
     throw error;
   }
 };
 
 export const deleteExistingLibrarian = async (id: string) => {
-  const librarian = await findLibrarianRawById(id);
-  if (!librarian) return null;
+  const existingLibrarian = await findLibrarianRawById(id);
+  if (!existingLibrarian) return null;
 
   const deleted = await removeLibrarianById(id);
 
-  if (deleted && librarian.foto) {
-    await deleteFile(extractFileKey(librarian.foto)).catch((err) =>
-      logger.error(`Failed to delete profile file on delete: ${err.message}`),
-    );
+  if (deleted && existingLibrarian.foto) {
+    await safeDeleteFile(existingLibrarian.foto, "profile photo on delete");
   }
 
   return deleted;

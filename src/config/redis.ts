@@ -1,16 +1,24 @@
 import { createClient } from "redis";
+
 import logger from "@/utils/core/logger";
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL || "redis://localhost:6379",
+export type RedisClient = ReturnType<typeof createClient>;
+
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+
+const redisClient: RedisClient = createClient({
+  url: REDIS_URL,
 });
 
-redisClient.on("error", (err) => logger.error("Redis Client Error", { err }));
+redisClient.on("error", (error: unknown): void => {
+  const errorMessage = error instanceof Error ? error.message : "Unknown Error";
 
-export const connectRedis = async () => {
+  logger.error(`Redis Client Error: ${errorMessage}`, { error });
+});
+
+export const connectRedis = async (): Promise<void> => {
   if (!redisClient.isOpen) {
     await redisClient.connect();
-    logger.info("Redis connected successfully");
   }
 };
 

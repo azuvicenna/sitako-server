@@ -4,9 +4,10 @@ import {
   findTransaction,
   removeTransactionById,
   findTransactionsWithPagination,
-  TransactionInsert,
+  type TransactionInsert,
 } from "@/repositories/librarian/transaction.repository";
-import {
+import { generateTransactionCode } from "@/utils/generators/transaction-code";
+import type {
   CreateTransaction,
   UpdateTransaction,
 } from "@/validations/librarian/transaction.schema";
@@ -17,20 +18,21 @@ export const getTransactionsWithPagination = async (
   limit: number,
   search: string,
 ) => {
-  return await findTransactionsWithPagination(status, page, limit, search);
+  return findTransactionsWithPagination(status, page, limit, search);
 };
 
 export const getTransactionById = async (id: string) => {
-  return await findTransaction(id);
+  return findTransaction(id);
 };
 
 export const createNewTransaction = async (payload: CreateTransaction) => {
-  const transactionData = {
+  const transactionData: TransactionInsert = {
     ...payload,
-    // Status "Dipinjam" di-enforce di service layer (bukan di controller)
-    status: "Dipinjam" as TransactionInsert["status"],
-  } as TransactionInsert;
-  return await insertTransaction(transactionData);
+    kdTransaksi: generateTransactionCode(),
+    status: "Dipinjam",
+  };
+
+  return insertTransaction(transactionData);
 };
 
 export const updateExistingTransaction = async (
@@ -44,10 +46,10 @@ export const updateExistingTransaction = async (
     return existingTransaction;
   }
 
-  const updateData = { ...payload } as Partial<TransactionInsert>;
-  return await updateTransactionById(id, updateData);
+  const updateData: Partial<TransactionInsert> = { ...payload };
+  return updateTransactionById(id, updateData);
 };
 
 export const deleteExistingTransaction = async (id: string) => {
-  return await removeTransactionById(id);
+  return removeTransactionById(id);
 };

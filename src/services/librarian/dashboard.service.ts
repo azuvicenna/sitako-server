@@ -6,6 +6,10 @@ import {
 } from "@/repositories/librarian/dashboard.repository";
 import { withCache } from "@/utils/data/repository";
 
+const dayFormatter = new Intl.DateTimeFormat("id-ID", {
+  weekday: "long",
+});
+
 export const getDashboardSummaryService = async () => {
   return getDashboardSummaryRepo();
 };
@@ -32,38 +36,36 @@ export const getWeeklyStatisticsService = async () => {
   return withCache("dashboard:statistics:weekly", 300, async () => {
     const rawData = await getWeeklyStatisticsRepo();
 
-    const stats = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-
-      const day = new Intl.DateTimeFormat("id-ID", {
-        weekday: "long",
-      }).format(d);
+    const now = new Date();
+    const stats = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(now.getDate() - (6 - i));
 
       return {
-        tanggal: d.toISOString().split("T")[0],
-        hari: day,
+        tanggal: date.toISOString().split("T")[0],
+        hari: dayFormatter.format(date),
         total: 0,
       };
     });
 
-    let totalPeminjaman = 0;
+    const statsMap = new Map(stats.map((item) => [item.tanggal, item]));
+    let totalBorrows = 0;
 
-    rawData.forEach((trx) => {
+    for (const trx of rawData) {
       const dateStr = trx.createdAt.toISOString().split("T")[0];
-      const dayStat = stats.find((s) => s.tanggal === dateStr);
+      const dayStat = statsMap.get(dateStr);
 
       if (dayStat) {
         dayStat.total += 1;
-        totalPeminjaman += 1;
+        totalBorrows += 1;
       }
-    });
+    }
 
-    const rataRata = Math.round(totalPeminjaman / 7);
+    const average = Math.round(totalBorrows / 7);
 
     return {
       statistik: stats,
-      rataRata,
+      rataRata: average,
     };
   });
 };

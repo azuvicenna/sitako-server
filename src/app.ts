@@ -1,16 +1,18 @@
 import cookieParser from "cookie-parser";
-import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import express, { Application, NextFunction, Request, Response } from "express";
 import helmet from "helmet";
-import routes from "./routes";
-import { requestLogger } from "@/middlewares/request-logger.middleware";
-import logger from "./utils/core/logger";
-import {
-  metricsMiddleware,
-  metricsHandler,
-} from "@/middlewares/matrics.middleware";
 
-const app = express();
+import {
+  metricsHandler,
+  metricsMiddleware,
+} from "@/middlewares/matrics.middleware";
+import { requestLogger } from "@/middlewares/request-logger.middleware";
+import routes from "@/routes";
+import logger from "@/utils/core/logger";
+import { sendFail } from "@/utils/core/handler";
+
+const app: Application = express();
 
 app.use(metricsMiddleware);
 app.use(helmet());
@@ -25,23 +27,24 @@ app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(requestLogger);
 
-app.use("/api", routes);
-
-// Metrics prometheus
-app.get("/metrics", metricsHandler);
-
-// Health Check Route for Docker/Jenkins
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response): void => {
   res.status(200).send("SITAKO API is running!");
 });
 
-// Global Error Handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error(err.message, { stack: err.stack });
-  res.status(500).json({
-    success: false,
-    message: "Terjadi kesalahan pada server",
-  });
-});
+app.get("/metrics", metricsHandler);
+
+app.use("/api", routes);
+
+app.use(
+  (err: Error, _req: Request, res: Response, next: NextFunction): void => {
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    logger.error(err.message, { stack: err.stack });
+
+    sendFail(res, 500, "Terjadi kesalahan pada server");
+  },
+);
 
 export default app;

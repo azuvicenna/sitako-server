@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import * as fineService from "@/services/librarian/fine.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 
@@ -23,22 +25,15 @@ export const getFinesHandler = async (req: Request, res: Response) => {
 
 export const showFine = async (req: Request, res: Response) => {
   try {
-    const fineId = req.params.id as string;
+    const fineId = resolveParam(req.params.id);
 
     if (!fineId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID denda tidak valid",
-      });
+      return sendFail(res, 400, "ID denda tidak valid");
     }
 
     const result = await fineService.getFineById(fineId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Denda tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -49,8 +44,7 @@ export const showFine = async (req: Request, res: Response) => {
 
 export const createFine = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
-    const result = await fineService.createNewFine(validatedBody);
+    const result = await fineService.createNewFine(req.body ?? {});
 
     return sendSuccess(res, result, "Denda berhasil ditambahkan");
   } catch (error) {
@@ -60,23 +54,16 @@ export const createFine = async (req: Request, res: Response) => {
 
 export const updateFine = async (req: Request, res: Response) => {
   try {
-    const fineId = req.params.id as string;
+    const fineId = resolveParam(req.params.id);
 
     if (!fineId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Denda tidak valid",
-      });
+      return sendFail(res, 400, "ID denda tidak valid");
     }
 
-    const validatedBody = req.body;
-    const result = await fineService.updateExistingFine(fineId, validatedBody);
+    const result = await fineService.updateExistingFine(fineId, req.body ?? {});
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Denda tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data denda berhasil diperbarui");
@@ -87,22 +74,15 @@ export const updateFine = async (req: Request, res: Response) => {
 
 export const deleteFine = async (req: Request, res: Response) => {
   try {
-    const fineId = req.params.id as string;
+    const fineId = resolveParam(req.params.id);
 
     if (!fineId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID Denda tidak valid",
-      });
+      return sendFail(res, 400, "ID denda tidak valid");
     }
 
     const result = await fineService.deleteExistingFine(fineId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Denda tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data denda berhasil dihapus");

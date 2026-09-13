@@ -1,4 +1,4 @@
-import { count, eq, and, ilike, or, desc } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { librarians } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
@@ -11,13 +11,14 @@ const clearLibrarianCache = async () => {
   await clearCacheByPattern("librarian:*");
 };
 
-export async function findLibrariansWithPagination(
+export const findLibrariansWithPagination = async (
   statusActive: string,
   page: number = 1,
   limit: number = 10,
   search: string = "",
-) {
-  const cacheKey = `librarian:status:${statusActive}:search:${search}:page:${page}:limit:${limit}`;
+) => {
+  const trimmedSearch = search.trim();
+  const cacheKey = `librarian:status:${statusActive}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCacheAndPagination(
     cacheKey,
@@ -30,13 +31,14 @@ export async function findLibrariansWithPagination(
         conditions.push(eq(librarians.status_aktif, statusActive === "true"));
       }
 
-      if (search) {
+      if (trimmedSearch) {
+        const searchPattern = `%${trimmedSearch}%`;
         conditions.push(
           or(
-            ilike(librarians.nama, `%${search}%`),
-            ilike(librarians.nip, `%${search}%`),
-            ilike(librarians.email, `%${search}%`),
-            ilike(librarians.telepon, `%${search}%`),
+            ilike(librarians.nama, searchPattern),
+            ilike(librarians.nip, searchPattern),
+            ilike(librarians.email, searchPattern),
+            ilike(librarians.telepon, searchPattern),
           ),
         );
       }
@@ -44,7 +46,7 @@ export async function findLibrariansWithPagination(
       const whereClause =
         conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [data, countResult] = await Promise.all([
+      const [data, [countResult]] = await Promise.all([
         db
           .select({
             id: librarians.id,
@@ -64,13 +66,13 @@ export async function findLibrariansWithPagination(
         db.select({ total: count() }).from(librarians).where(whereClause),
       ]);
 
-      return { data, total: Number(countResult[0]?.total ?? 0) };
+      return { data, total: Number(countResult?.total ?? 0) };
     },
   );
-}
+};
 
-export async function findLibrarianById(id: string) {
-  const result = await db
+export const findLibrarianById = async (id: string) => {
+  const [librarian] = await db
     .select({
       id: librarians.id,
       nama: librarians.nama,
@@ -85,24 +87,25 @@ export async function findLibrarianById(id: string) {
     .where(eq(librarians.id, id))
     .limit(1);
 
-  return result[0] || null;
-}
+  return librarian ?? null;
+};
 
-export async function findLibrarianRawById(id: string) {
-  const result = await db
+export const findLibrarianRawById = async (
+  id: string,
+): Promise<LibrarianSelect | null> => {
+  const [librarian] = await db
     .select()
     .from(librarians)
     .where(eq(librarians.id, id))
     .limit(1);
 
-  return result[0] || null;
-}
+  return librarian ?? null;
+};
 
 export const insertLibrarian = async (
   data: LibrarianInsert,
 ): Promise<LibrarianSelect> => {
-  const result = await db.insert(librarians).values(data).returning();
-  const created = result[0];
+  const [created] = await db.insert(librarians).values(data).returning();
 
   if (created) {
     await clearLibrarianCache();
@@ -115,30 +118,30 @@ export const updateLibrarianById = async (
   id: string,
   data: Partial<LibrarianInsert>,
 ): Promise<LibrarianSelect | null> => {
-  const result = await db
+  const [updated] = await db
     .update(librarians)
     .set(data)
     .where(eq(librarians.id, id))
     .returning();
-  const updated = result[0] || null;
 
   if (updated) {
     await clearLibrarianCache();
   }
 
-  return updated;
+  return updated ?? null;
 };
 
-export const removeLibrarianById = async (id: string) => {
-  const result = await db
+export const removeLibrarianById = async (
+  id: string,
+): Promise<LibrarianSelect | null> => {
+  const [deleted] = await db
     .delete(librarians)
     .where(eq(librarians.id, id))
     .returning();
-  const deleted = result[0] || null;
 
   if (deleted) {
     await clearLibrarianCache();
   }
 
-  return deleted;
+  return deleted ?? null;
 };

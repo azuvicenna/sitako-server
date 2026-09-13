@@ -3,6 +3,7 @@ import {
   getPaginationParams,
   sendSuccess,
   sendError,
+  sendFail,
 } from "@/utils/core/handler";
 import logger from "@/utils/core/logger";
 
@@ -80,6 +81,28 @@ describe("Response and Pagination Utils", () => {
       });
 
       spyLogger.mockRestore();
+    });
+  });
+
+  describe("sendFail", () => {
+    it("should send the correct status code and failure message", () => {
+      sendFail(mockRes as Response, 400, "Bad Request");
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Bad Request",
+      });
+    });
+
+    it("should handle 404 status code with custom message", () => {
+      sendFail(mockRes as Response, 404, "Not Found");
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Not Found",
+      });
     });
   });
 });

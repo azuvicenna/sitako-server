@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import * as finePaymentService from "@/services/librarian/fine-payment.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 
@@ -23,22 +25,15 @@ export const getFinePaymentsHandler = async (req: Request, res: Response) => {
 
 export const showFinePayment = async (req: Request, res: Response) => {
   try {
-    const paymentId = req.params.id as string;
+    const paymentId = resolveParam(req.params.id);
 
     if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID pembayaran denda tidak valid",
-      });
+      return sendFail(res, 400, "ID pembayaran denda tidak valid");
     }
 
     const result = await finePaymentService.getFinePaymentById(paymentId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data pembayaran denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data pembayaran denda tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -49,8 +44,9 @@ export const showFinePayment = async (req: Request, res: Response) => {
 
 export const createFinePayment = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
-    const result = await finePaymentService.createNewFinePayment(validatedBody);
+    const result = await finePaymentService.createNewFinePayment(
+      req.body ?? {},
+    );
 
     return sendSuccess(res, result, "Pembayaran denda berhasil dicatat");
   } catch (error) {
@@ -60,26 +56,19 @@ export const createFinePayment = async (req: Request, res: Response) => {
 
 export const updateFinePayment = async (req: Request, res: Response) => {
   try {
-    const paymentId = req.params.id as string;
+    const paymentId = resolveParam(req.params.id);
 
     if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID pembayaran denda tidak valid",
-      });
+      return sendFail(res, 400, "ID pembayaran denda tidak valid");
     }
 
-    const validatedBody = req.body;
     const result = await finePaymentService.updateExistingFinePayment(
       paymentId,
-      validatedBody,
+      req.body ?? {},
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data pembayaran denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data pembayaran denda tidak ditemukan");
     }
 
     return sendSuccess(
@@ -94,23 +83,17 @@ export const updateFinePayment = async (req: Request, res: Response) => {
 
 export const deleteFinePayment = async (req: Request, res: Response) => {
   try {
-    const paymentId = req.params.id as string;
+    const paymentId = resolveParam(req.params.id);
 
     if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID pembayaran denda tidak valid",
-      });
+      return sendFail(res, 400, "ID pembayaran denda tidak valid");
     }
 
     const result =
       await finePaymentService.deleteExistingFinePayment(paymentId);
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Data pembayaran denda tidak ditemukan",
-      });
+      return sendFail(res, 404, "Data pembayaran denda tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data pembayaran denda berhasil dihapus");

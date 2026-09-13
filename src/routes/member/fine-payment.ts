@@ -1,15 +1,16 @@
 import { Router } from "express";
-import {
-  getFinePaymentsHandler,
-  showFinePayment,
-  initiatePayment,
-} from "@/controllers/member/fine-payment.controller";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
 import { validate } from "@/middlewares/validate.middleware";
 import { paginationSchema } from "@/validations/utils/pagination.schema";
-import { verifyAuth } from "@/middlewares/auth.middleware";
 import { initiateOnlinePaymentSchema } from "@/validations/member/fine-payment.schema";
+import {
+  getFinePaymentsHandler,
+  initiatePayment,
+  showFinePayment,
+} from "@/controllers/member/fine-payment.controller";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 

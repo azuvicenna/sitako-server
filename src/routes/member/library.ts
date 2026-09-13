@@ -1,15 +1,16 @@
 import { Router } from "express";
+
+import { verifyAuth } from "@/middlewares/auth.middleware";
+import { validate } from "@/middlewares/validate.middleware";
+import { createBookmarkSchema } from "@/validations/member/bookmark.schema";
 import {
-  showBook,
-  readDigitalBook,
   createBookmark,
   deleteBookmark,
+  readDigitalBook,
+  showBook,
 } from "@/controllers/member/library.controller";
-import { verifyAuth } from "@/middlewares/auth.middleware";
-import { createBookmarkSchema } from "@/validations/member/bookmark.schema";
-import { validate } from "@/middlewares/validate.middleware";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(verifyAuth);
 

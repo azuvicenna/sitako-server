@@ -1,25 +1,33 @@
 import { Request, Response } from "express";
 import * as memberService from "@/services/librarian/member.service";
+import { resolveParam } from "@/utils/core/param";
 import {
   getPaginationParams,
   sendError,
+  sendFail,
   sendSuccess,
 } from "@/utils/core/handler";
 import { imageFileSchema } from "@/validations/librarian/librarian.schema";
 
+const VALID_STATUS_ACTIVE = ["Semua", "true", "false"] as const;
+type StatusActive = (typeof VALID_STATUS_ACTIVE)[number];
+
+const isValidStatusActive = (status: unknown): status is StatusActive => {
+  return (
+    typeof status === "string" &&
+    (VALID_STATUS_ACTIVE as readonly string[]).includes(status)
+  );
+};
+
 export const getMemberHandler = async (req: Request, res: Response) => {
   try {
-    const statusActive = req.query.statusActive as string;
+    const { statusActive } = req.query;
 
-    if (!statusActive || !["Semua", "true", "false"].includes(statusActive)) {
-      return res.status(400).json({
-        success: false,
-        message: "Status aktif tidak valid",
-      });
+    if (!isValidStatusActive(statusActive)) {
+      return sendFail(res, 400, "Status aktif tidak valid");
     }
 
     const { page, limit, search } = getPaginationParams(req.query);
-
     const result = await memberService.getMembersWithPagination(
       statusActive,
       page,
@@ -35,22 +43,15 @@ export const getMemberHandler = async (req: Request, res: Response) => {
 
 export const showMember = async (req: Request, res: Response) => {
   try {
-    const memberId = req.params.id as string;
+    const memberId = resolveParam(req.params.id);
 
     if (!memberId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID anggota tidak valid",
-      });
+      return sendFail(res, 400, "ID anggota tidak valid");
     }
 
     const result = await memberService.getMemberById(memberId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Anggota tidak ditemukan",
-      });
+      return sendFail(res, 404, "Anggota tidak ditemukan");
     }
 
     return sendSuccess(res, result);
@@ -61,11 +62,9 @@ export const showMember = async (req: Request, res: Response) => {
 
 export const createMember = async (req: Request, res: Response) => {
   try {
-    const validatedBody = req.body;
     const validatedFile = imageFileSchema.parse(req.file);
-
     const result = await memberService.createNewMember(
-      validatedBody,
+      req.body ?? {},
       validatedFile,
     );
 
@@ -77,31 +76,24 @@ export const createMember = async (req: Request, res: Response) => {
 
 export const updateMember = async (req: Request, res: Response) => {
   try {
-    const memberId = req.params.id as string;
+    const memberId = resolveParam(req.params.id);
 
     if (!memberId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID anggota tidak valid",
-      });
+      return sendFail(res, 400, "ID anggota tidak valid");
     }
 
-    const validatedBody = req.body;
     const validatedFile = req.file
       ? imageFileSchema.parse(req.file)
       : undefined;
 
     const result = await memberService.updateExistingMember(
       memberId,
-      validatedBody,
+      req.body ?? {},
       validatedFile,
     );
 
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Anggota tidak ditemukan",
-      });
+      return sendFail(res, 404, "Anggota tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data anggota berhasil diperbarui");
@@ -112,22 +104,15 @@ export const updateMember = async (req: Request, res: Response) => {
 
 export const deleteMember = async (req: Request, res: Response) => {
   try {
-    const memberId = req.params.id as string;
+    const memberId = resolveParam(req.params.id);
 
     if (!memberId) {
-      return res.status(400).json({
-        success: false,
-        message: "ID anggota tidak valid",
-      });
+      return sendFail(res, 400, "ID anggota tidak valid");
     }
 
     const result = await memberService.deleteExistingMember(memberId);
-
     if (!result) {
-      return res.status(404).json({
-        success: false,
-        message: "Anggota tidak ditemukan",
-      });
+      return sendFail(res, 404, "Anggota tidak ditemukan");
     }
 
     return sendSuccess(res, result, "Data anggota berhasil dihapus");
