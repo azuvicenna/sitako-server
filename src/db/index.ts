@@ -4,12 +4,18 @@ import { Pool } from "pg";
 
 import * as schema from "./schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is required");
-}
+const host = process.env.POSTGRES_HOST || "localhost";
+const port = process.env.POSTGRES_PORT || "5432";
+const user = process.env.POSTGRES_USER || "postgres";
+const password = process.env.POSTGRES_PASSWORD || "password";
+const dbName = process.env.POSTGRES_DB || "mydb";
+
+export const databaseUrl: string =
+  process.env.DATABASE_URL ||
+  `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${dbName}`;
 
 export const pool: Pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 
 export const db: NodePgDatabase<typeof schema> = drizzle(pool, { schema });

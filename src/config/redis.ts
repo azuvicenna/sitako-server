@@ -4,7 +4,9 @@ import logger from "@/utils/core/logger";
 
 export type RedisClient = ReturnType<typeof createClient>;
 
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const redisHost = process.env.REDIS_HOST || "localhost";
+const redisPort = process.env.REDIS_PORT || "6379";
+const REDIS_URL = process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
 
 const redisClient: RedisClient = createClient({
   url: REDIS_URL,
