@@ -13,7 +13,11 @@ Berikut adalah beberapa teknologi utama yang digunakan beserta fungsinya:
 - **Drizzle ORM & PostgreSQL**: PostgreSQL sebagai database utama, sedangkan Drizzle ORM digunakan untuk memudahkan manajemen skema dan query ke database.
 - **Redis**: In-memory data store yang dipakai untuk caching agar respons aplikasi lebih cepat.
 - **Cloudflare R2**: Layanan object storage yang kompatibel dengan S3 API, digunakan untuk menyimpan file seperti gambar, dokumen, atau aset lainnya.
-- **Docker & Docker Compose**: Mengemas aplikasi beserta environment-nya (PostgreSQL & Redis) ke dalam container sehingga aplikasi bisa dijalankan dengan konsisten di mesin manapun.
+- **Tripay**: Payment gateway terintegrasi untuk menangani transaksi pembayaran denda perpustakaan.
+- **Jest & Supertest**: Framework testing untuk pengujian otomatis (Unit, Integration, dan Feature tests).
+- **k6**: Framework modern untuk load testing dan performance profiling API.
+- **Prometheus & Exporters**: Monitoring stack untuk mengumpulkan dan memvisualisasikan metrics performa aplikasi, PostgreSQL, dan Redis.
+- **Docker & Docker Compose**: Mengemas aplikasi beserta ekosistem pendukungnya (PostgreSQL, Redis, Exporters, dan Prometheus) ke dalam container.
 - **Jenkins**: Tools CI/CD untuk mengotomatisasi pipeline mulai dari build, test, hingga proses deploy langsung ke Virtual Machine (menggunakan Multipass).
 
 ## Daftar Library Dependencies
@@ -50,7 +54,7 @@ Langkah pertama sebelum menjalankan aplikasi secara lokal:
    ```bash
    cp .env.example .env
    ```
-2. Sesuaikan nilai di dalam `.env` dengan kredensial database, Redis, pengaturan mailer, dan S3 (termasuk `PUBLIC_STORAGE_URL` untuk akses gambar publik dari Cloudflare R2).
+2. Sesuaikan nilai di dalam `.env` dengan kredensial database, Redis, Tripay, mailer, dan S3 (termasuk `PUBLIC_STORAGE_URL` untuk akses gambar publik dari Cloudflare R2).
 3. Install semua dependencies:
    ```bash
    npm install
@@ -60,23 +64,79 @@ Langkah pertama sebelum menjalankan aplikasi secara lokal:
 
 Gunakan perintah berikut untuk pengembangan lokal:
 
-- Menjalankan server lokal (dengan watch/hot-reload):
+- Menjalankan server lokal (dengan watch/hot-reload via `tsx`):
   ```bash
   npm run dev
   ```
+- Menjalankan container database (PostgreSQL) & Redis saja di background:
+  ```bash
+  docker compose up -d database redis
+  ```
 
-Perintah khusus untuk database (Drizzle):
+Perintah khusus untuk database (Drizzle ORM):
 
 - `npm run db:generate` : Membuat file migrasi dari skema terbaru.
 - `npm run db:migrate` : Mengeksekusi migrasi ke database.
 - `npm run db:push` : Mendorong perubahan skema langsung ke database (cocok untuk dev).
-- `npm run db:studio` : Membuka antarmuka web GUI untuk melihat dan mengelola isi database.
+- `npm run db:studio` : Membuka antarmuka web GUI Drizzle Studio untuk melihat dan mengelola isi database.
 
-### Menggunakan Docker
+### Type Checking & Build Production
 
-Jika ingin langsung menjalankan aplikasi, database, dan redis menggunakan Docker:
+Gunakan perintah berikut untuk validasi tipe data dan proses build:
 
-- Build dan jalankan semua container di background:
+- Memeriksa error tipe data TypeScript tanpa melakukan kompilasi file:
+  ```bash
+  npm run typecheck
+  ```
+- Melakukan kompilasi kode TypeScript ke JavaScript (`dist/`) beserta resolving path alias:
+  ```bash
+  npm run build
+  ```
+- Menjalankan server hasil build production:
+  ```bash
+  npm start
+  ```
+
+### Automated Testing (Jest)
+
+Pengujian otomatis dilakukan menggunakan Jest dan Supertest. Variabel lingkungan pengujian dimuat otomatis dari `.env.test`.
+
+- Menjalankan seluruh rangkaian test suite:
+  ```bash
+  npm test
+  ```
+- Menjalankan unit tests (`tests/unit`):
+  ```bash
+  npm run test:unit
+  ```
+- Menjalankan integration tests (`tests/integration`):
+  ```bash
+  npm run test:integration
+  ```
+- Menjalankan feature / API controller tests (`tests/feature`):
+  ```bash
+  npm run test:feature
+  ```
+
+### Load Testing (k6)
+
+Tersedia 9 skenario pengujian beban (*load & performance testing*) menggunakan k6:
+
+- `npm run k6:smoke` : Smoke test cepat untuk verifikasi kesehatan dasar endpoint API.
+- `npm run k6:login` : Stress test alur login dan verifikasi captcha/autentikasi pengguna.
+- `npm run k6:load` : Pengujian beban kerja standar dalam batas kapasitas operasional normal.
+- `npm run k6:mixed` : Pengujian simulasi trafik campuran (pencarian, navigasi, dan membaca buku).
+- `npm run k6:stress` : Stress test melampaui batas kapasitas normal untuk menguji stabilitas sistem.
+- `npm run k6:spike` : Pengujian lonjakan beban ekstrem secara tiba-tiba dalam kurun waktu singkat.
+- `npm run k6:soak` : Pengujian durasi panjang untuk mendeteksi memory leak dan degradasi performa bertahap.
+- `npm run k6:breakpoint` : Pengujian bertingkat hingga menemukan titik batas maksimal sistem sebelum mengalami kegagalan.
+- `npm run k6:write` : Pengujian beban terhadap operasi penulisan data dan siklus hidup transaksi peminjaman.
+
+### Menggunakan Docker & Monitoring Stack
+
+Jika ingin menjalankan aplikasi beserta seluruh ekosistem pendukungnya (PostgreSQL, Redis, Exporters, dan Prometheus):
+
+- Build dan jalankan seluruh container di background:
   ```bash
   docker compose up -d
   ```
@@ -84,10 +144,16 @@ Jika ingin langsung menjalankan aplikasi, database, dan redis menggunakan Docker
   ```bash
   docker logs -f sitako-app
   ```
-- Menghentikan dan menghapus container yang sedang berjalan:
+- Menghentikan dan menghapus semua container yang sedang berjalan:
   ```bash
   docker compose down
   ```
+
+Akses layanan pendukung:
+
+- **Prometheus UI**: `http://localhost:9091`
+- **Application Metrics**: `http://localhost:8080/metrics`
+- **Health Check Endpoint**: `http://localhost:8080/`
 
 ### CI/CD dengan Jenkins
 
