@@ -22,3 +22,6 @@ if (fs.existsSync(envPath)) {
     }
   }
 }
+
+jest.mock("ulid", () => require("./ulid-mock.js"));
+jest.mock("winston", () => require("./winston-mock.js"));

@@ -1,6 +1,8 @@
 import winston from "winston";
 import logger from "@/utils/core/logger";
 
+jest.unmock("winston");
+
 describe("Winston Logger", () => {
   it("should create a logger instance", () => {
     expect(logger).toBeDefined();

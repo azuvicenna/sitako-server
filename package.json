@@ -5,6 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:feature": "jest tests/feature",
+    "k6:smoke": "k6 run tests/load/scenarios/smoke.js",
+    "k6:load": "k6 run tests/load/scenarios/load.js",
+    "k6:stress": "k6 run tests/load/scenarios/stress.js",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
