@@ -122,6 +122,31 @@ services:
     networks:
       - backend
 
+  # --- Load Balancer (Nginx) ---
+  # Aktifkan service ini jika Anda ingin menjalankan multi-replica app (misal: docker compose up -d --scale app=2).
+  # Catatan langkah saat mengaktifkan:
+  # 1. Hapus/comment baris 'container_name: sitako-app' pada service 'app' di atas agar Docker bisa men-generate nama kontainer unik untuk tiap replika.
+  # 2. Hapus/comment baris ports host mapping '- "${PORT:-8080}:${PORT:-8080}"' pada service 'app' agar tidak terjadi port collision di host.
+  # 3. Port akses publik diarahkan melalui load balancer ini (misal port 80 atau 8080).
+  #
+  # loadbalancer:
+  #   image: nginx:alpine
+  #   container_name: sitako-loadbalancer
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${LB_PORT:-80}:80"
+  #   volumes:
+  #     - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - backend
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+
 networks:
   backend:
     driver: bridge
