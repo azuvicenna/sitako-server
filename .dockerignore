@@ -46,7 +46,6 @@ Thumbs.db
 *.log
 logs/
 
-# Linting & Formatting
 .prettierrc*
 .prettierignore
 eslint.config.*
