@@ -20,9 +20,10 @@ Dokumentasi ini disusun khusus untuk tim Frontend sebagai panduan integrasi leng
 13. [Perpustakaan & Bookmark - Anggota (`/api/book`)](#11-perpustakaan--bookmark---anggota-apibook)
 14. [Transaksi - Anggota (`/api/member/transactions`)](#12-transaksi---anggota-apimembertransactions)
 15. [Pembayaran Denda Online - Anggota (`/api/member/fine-payments`)](#13-pembayaran-denda-online---anggota-apimemberfine-payments)
-16. [Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)](#14-webhook-payment-gateway-tripay-apiwebhookstripay)
-17. [Daftar Enum Database](#15-daftar-enum-database)
-18. [Tips & Panduan Integrasi Frontend](#tips--panduan-integrasi-frontend)
+16. [Dashboard - Anggota (`/api/member/dashboard`)](#14-dashboard---anggota-apimemberdashboard)
+17. [Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)](#15-webhook-payment-gateway-tripay-apiwebhookstripay)
+18. [Daftar Enum Database](#16-daftar-enum-database)
+19. [Tips & Panduan Integrasi Frontend](#tips--panduan-integrasi-frontend)
 
 ---
 
@@ -2516,7 +2517,92 @@ Digunakan oleh Pustakawan untuk mencatat pembayaran denda langsung/tunai di perp
 
 ## 11. Perpustakaan & Bookmark - Anggota (`/api/book`)
 
-### 11.1 Melihat Detail Buku (Sisi Anggota)
+### 11.1 Mengambil Daftar Buku (Katalog Member)
+Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam atau dibaca oleh anggota, didukung pagination dan pencarian.
+
+- **Method**: `GET`
+- **URL**: `/api/book` atau `/api/book/`
+- **Auth**: Wajib (Anggota via cookie `token`)
+- **Headers**: `Content-Type: application/json`
+- **Query Params**:
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10, max: 100)
+  - `search` (string, optional, pencarian pada judul, penulis, penerbit, atau ISBN)
+  - `bookType` (string, optional, filter jenis buku: `Fisik` atau `Digital`)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Daftar buku berhasil diambil",
+    "data": [
+      {
+        "id": "bk-101",
+        "judul": "Clean Code",
+        "penulis": "Robert C. Martin",
+        "penerbit": "Prentice Hall",
+        "isbn": "978-0132350884",
+        "genre": [
+          "Technology",
+          "Programming"
+        ],
+        "tipeBuku": "Fisik",
+        "tahunTerbit": 2008,
+        "jumlahStok": 3,
+        "cover": "url-cover-cleancode.jpg"
+      },
+      {
+        "id": "bk-102",
+        "judul": "Bumi Manusia",
+        "penulis": "Pramoedya Ananta Toer",
+        "penerbit": "Hasta Mitra",
+        "isbn": "978-9799731234",
+        "genre": [
+          "Historical",
+          "Fiction"
+        ],
+        "tipeBuku": "Digital",
+        "tahunTerbit": 1980,
+        "jumlahStok": 0,
+        "cover": "url-cover-bumimanusia.jpg",
+        "file": "url-file-bumimanusia.pdf"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "totalItems": 120,
+      "totalPages": 12,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+  ```
+- **Response Error**:
+  - `400 Bad Request` (Query parameter tidak valid):
+    ```json
+    {
+      "success": false,
+      "message": "Validasi gagal"
+    }
+    ```
+  - `401 Unauthorized`:
+    ```json
+    {
+      "success": false,
+      "message": "Akses ditolak. Belum login."
+    }
+    ```
+  - `500 Internal Server Error`:
+    ```json
+    {
+      "success": false,
+      "message": "Internal server error"
+    }
+    ```
+
+---
+
+### 11.2 Melihat Detail Buku (Sisi Anggota)
 - **Method**: `GET`
 - **URL**: `/api/book/detail/:id`
 - **Auth**: Wajib (Anggota)
@@ -2693,6 +2779,88 @@ Menyimpan buku ke daftar simpanan/favorit anggota.
     {
       "success": false,
       "message": "Bookmark tidak ditemukan"
+    }
+    ```
+
+---
+
+### 11.5 Mengambil Daftar Bookmark (Pagination)
+Melihat daftar seluruh buku yang disimpan/dibookmark oleh anggota yang sedang login, didukung pagination dan pencarian.
+
+- **Method**: `GET`
+- **URL**: `/api/book/bookmark`
+- **Auth**: Wajib (Anggota via cookie `token`)
+- **Headers**: `Content-Type: application/json`
+- **Query Params**:
+  - `page` (number, optional, default: 1)
+  - `limit` (number, optional, default: 10, max: 100)
+  - `search` (string, optional, pencarian judul atau penulis buku)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Data bookmark berhasil diambil",
+    "data": [
+      {
+        "id": "bm-123",
+        "buku": {
+          "id": "bk-456",
+          "judul": "Atomic Habits",
+          "penulis": "James Clear",
+          "cover": "cover-atomic.jpg",
+          "tipeBuku": "Fisik",
+          "genre": [
+            "Self-Improvement",
+            "Productivity"
+          ]
+        },
+        "createdAt": "2026-09-14T10:00:00.000Z"
+      },
+      {
+        "id": "bm-124",
+        "buku": {
+          "id": "bk-457",
+          "judul": "Filosofi Teras",
+          "penulis": "Henry Manampiring",
+          "cover": "cover-filosofi.jpg",
+          "tipeBuku": "Digital",
+          "genre": [
+            "Philosophy"
+          ]
+        },
+        "createdAt": "2026-09-13T08:30:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "totalItems": 35,
+      "totalPages": 4,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+  ```
+- **Response Error**:
+  - `400 Bad Request` (Query parameter tidak valid):
+    ```json
+    {
+      "success": false,
+      "message": "Validasi gagal"
+    }
+    ```
+  - `401 Unauthorized`:
+    ```json
+    {
+      "success": false,
+      "message": "Akses ditolak. Belum login."
+    }
+    ```
+  - `500 Internal Server Error`:
+    ```json
+    {
+      "success": false,
+      "message": "Internal server error"
     }
     ```
 
@@ -3141,7 +3309,74 @@ Mengirimkan request pembuatan tagihan pembayaran online melalui Tripay.
 
 ---
 
-## 14. Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)
+## 14. Dashboard - Anggota (`/api/member/dashboard`)
+
+Mengambil ringkasan statistik buku yang sedang dipinjam, total tagihan denda belum dibayar, total bookmark, daftar transaksi aktif, tagihan denda yang belum dibayar, serta bookmark buku terbaru milik anggota yang sedang login.
+
+- **Method**: `GET`
+- **URL**: `/api/member/dashboard`
+- **Auth**: Wajib (Anggota / Member via cookie `token`)
+- **Headers**: `Content-Type: application/json`
+- **Request Body**: *(Tidak ada / kosong)*
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Data dashboard member berhasil diambil",
+    "statistik": {
+      "bukuDipinjam": 2,
+      "totalDenda": 15000,
+      "totalBookmark": 8
+    },
+    "transaksiAktif": [
+      {
+        "id": "trx-123",
+        "buku": {
+          "judul": "Atomic Habits",
+          "cover": "url-cover-1.jpg"
+        },
+        "tglKembali": "2026-09-20T00:00:00.000Z",
+        "status": "Dipinjam"
+      }
+    ],
+    "tagihanDenda": [
+      {
+        "id": "pay-123",
+        "totalDenda": 15000,
+        "checkoutUrl": "https://tripay.co.id/checkout/..."
+      }
+    ],
+    "bookmarkTerbaru": [
+      {
+        "id": "bm-123",
+        "buku": {
+          "judul": "Filosofi Teras",
+          "penulis": "Henry Manampiring",
+          "cover": "url-cover-2.jpg"
+        }
+      }
+    ]
+  }
+  ```
+- **Response Error**:
+  - `401 Unauthorized` (Belum login / token tidak valid):
+    ```json
+    {
+      "success": false,
+      "message": "Akses ditolak. Belum login."
+    }
+    ```
+  - `500 Internal Server Error`:
+    ```json
+    {
+      "success": false,
+      "message": "Internal server error"
+    }
+    ```
+
+---
+
+## 15. Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)
 
 Endpoint penerima callback otomatis dari server Tripay ketika transaksi denda online telah dibayar oleh anggota.
 

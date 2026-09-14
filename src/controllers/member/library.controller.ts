@@ -1,7 +1,22 @@
 import { Request, Response } from "express";
 import * as libraryService from "@/services/member/library.service";
+import { bookTypeEnum } from "@/db/schema";
 import { resolveParam } from "@/utils/core/param";
-import { sendError, sendFail, sendSuccess } from "@/utils/core/handler";
+import {
+  getPaginationParams,
+  sendError,
+  sendFail,
+  sendSuccess,
+} from "@/utils/core/handler";
+
+type BookType = (typeof bookTypeEnum.enumValues)[number];
+
+const isValidBookType = (type: unknown): type is BookType => {
+  return (
+    typeof type === "string" &&
+    bookTypeEnum.enumValues.includes(type as BookType)
+  );
+};
 
 export const showBook = async (req: Request, res: Response) => {
   try {
@@ -79,3 +94,50 @@ export const deleteBookmark = async (req: Request, res: Response) => {
     return sendError(res, error, "deleteBookmark");
   }
 };
+
+export const getMyBookmarks = async (req: Request, res: Response) => {
+  try {
+    const memberId = req.user?.id;
+    if (!memberId) {
+      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+    }
+
+    const { page, limit, search } = getPaginationParams(req.query);
+    const result = await libraryService.getBookmarksWithPagination(
+      memberId,
+      page,
+      limit,
+      search,
+    );
+
+    return sendSuccess(res, result, "Data bookmark berhasil diambil");
+  } catch (error) {
+    return sendError(res, error, "getMyBookmarks");
+  }
+};
+
+export const getAvailableBooks = async (req: Request, res: Response) => {
+  try {
+    const rawBookType = req.query.bookType ?? req.query.tipeBuku;
+
+    if (rawBookType !== undefined && !isValidBookType(rawBookType)) {
+      return sendFail(res, 400, "Tipe buku tidak ditemukan atau tidak valid");
+    }
+
+    const { page, limit, search } = getPaginationParams(req.query);
+    const bookType = rawBookType as BookType | undefined;
+
+    const result = await libraryService.getAvailableBooksWithPagination(
+      page,
+      limit,
+      search,
+      bookType,
+    );
+
+    return sendSuccess(res, result, "Daftar buku berhasil diambil");
+  } catch (error) {
+    return sendError(res, error, "getAvailableBooks");
+  }
+};
+
+

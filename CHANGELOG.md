@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### [2026-09-14]
+
+#### Added
+
+- Menambahkan endpoint GET dashboard untuk member
+- Menambahkan endpoint GET bookmarks untuk member
+- Menambahkan endpoint GET katalog buku untuk member
+
 ### [2026-09-13]
 
 #### Changed

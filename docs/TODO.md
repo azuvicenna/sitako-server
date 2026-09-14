@@ -21,7 +21,6 @@
 - [ ] Rencana penambahan fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
 - [ ] Membuat fitur cetak laporan typst dan excel/csv
 - [ ] Membuat cronjob/scheduler notifikasi email otomatis
-- [ ] Beberapa GET untuk member belum ada seperti dashboard dan book list
 - [ ] Menambahkan load balancer ke docker
 
 ---
@@ -34,7 +33,9 @@
 
 ## ✅ Selesai (Completed)
 
-- [ ] 
+- [x] Endpoint GET dashboard untuk member (`/api/member/dashboard`)
+- [x] Endpoint GET bookmark untuk member (`/api/book/bookmark`)
+- [x] Endpoint GET katalog daftar buku untuk member (`/api/book`)
 
 ---
 

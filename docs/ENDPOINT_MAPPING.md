@@ -59,8 +59,11 @@ Berikut adalah mapping alur fungsi dari masing-masing fitur utama beserta deskri
 | `/books/` | POST | Menambahkan data buku baru beserta file PDF / Cover-nya ke sistem | `createBook` | `createNewBook` | `insertBook` |
 | `/books/:id` | PUT | Mengubah / memperbarui data buku yang sudah ada di sistem | `updateBook` | `updateExistingBook` | `updateBookById` |
 | `/books/:id` | DELETE | Menghapus data sebuah buku dari sistem beserta file terkaitnya | `deleteBook` | `deleteExistingBook` | `removeBookById` |
+| `/book/` | GET | Mengambil daftar katalog seluruh buku yang dapat dipinjam oleh member dengan pagination | `getAvailableBooks` | `getAvailableBooksWithPagination` | `findAvailableBooksWithPagination` |
 | `/book/digital/read/:id` | GET | Memberikan akses untuk melihat/membaca file buku digital (PDF) | `readDigitalBook` | - | - |
-| `/book/bookmark/:id` | POST | Menambahkan buku ke daftar simpanan (bookmark) milik member/anggota | `createBookmark` | - | - |
+| `/book/bookmark` | GET | Mengambil daftar seluruh buku yang disimpan (bookmark) oleh member dengan pagination | `getMyBookmarks` | `getBookmarksWithPagination` | `findBookmarksWithPagination` |
+| `/book/bookmark/:id` | POST | Menambahkan buku ke daftar simpanan (bookmark) milik member/anggota | `createBookmark` | `createNewBookmark` | `insertBookmark` |
+| `/book/bookmark/delete/:bookmarkId` | DELETE | Menghapus buku dari daftar simpanan (bookmark) member/anggota | `deleteBookmark` | `deleteExistingBookmark` | `removeBookmarkById` |
 
 ### 3. Fitur Rak & Tumpukan Buku (`/shelves`)
 
@@ -116,3 +119,9 @@ Berikut adalah mapping alur fungsi dari masing-masing fitur utama beserta deskri
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `/profile/me` | GET | Menampilkan profil pengguna yang sedang login (Pustakawan / Anggota) | `getMyProfile` | `getProfileService` | `findLibrarianById` / `findMemberById` |
 | `/profile/me` | PUT | Memperbarui data profil mandiri pengguna yang sedang login | `updateMyProfile` | `updateProfileService` | `updateLibrarianById` / `updateMemberById` |
+
+### 9. Fitur Dashboard Member (`/member/dashboard`)
+
+| Endpoint | HTTP Method | Fungsi / Deskripsi | Method Controller | Method Service | Method Repository |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/member/dashboard` | GET | Mengambil statistik buku dipinjam, total denda, bookmark, transaksi aktif, tagihan denda, dan bookmark terbaru member | `getMemberDashboard` | `getMemberDashboardService` | `getMemberDashboardRepo` |

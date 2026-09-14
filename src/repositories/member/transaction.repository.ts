@@ -4,6 +4,7 @@ import { books, librarians, members, transactions } from "@/db/schema";
 import { withCacheAndPagination } from "@/utils/data/repository";
 import { clearCacheByPattern } from "@/utils/core/cache";
 import { invalidateDashboardCache } from "@/repositories/librarian/dashboard.repository";
+import { invalidateMemberDashboardCache } from "./dashboard.repository";
 
 export type TransactionInsert = typeof transactions.$inferInsert;
 export type TransactionSelect = typeof transactions.$inferSelect;
@@ -12,6 +13,7 @@ const clearTransactionCache = async () => {
   await Promise.all([
     clearCacheByPattern("transaction:*"),
     invalidateDashboardCache(),
+    invalidateMemberDashboardCache(),
   ]);
 };
 

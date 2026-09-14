@@ -10,6 +10,7 @@ import memberRoutes from "./librarian/member";
 import shelfRoutes from "./librarian/shelf";
 import transactionRoutes from "./librarian/transaction";
 import libraryRoutes from "./member/library";
+import memberDashboardRoutes from "./member/dashboard";
 import memberFinePaymentRoutes from "./member/fine-payment";
 import memberTransactionRoutes from "./member/transaction";
 import profileRoutes from "./profile/profile";
@@ -30,6 +31,7 @@ router.use("/fines", fineRoutes);
 router.use("/transactions", transactionRoutes);
 
 router.use("/book", libraryRoutes);
+router.use("/member/dashboard", memberDashboardRoutes);
 router.use("/member/transactions", memberTransactionRoutes);
 router.use("/member/fine-payments", memberFinePaymentRoutes);
 

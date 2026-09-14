@@ -10,7 +10,10 @@ export type BookSelect = typeof books.$inferSelect;
 
 const clearBookCache = async (bookType?: BookSelect["tipeBuku"]) => {
   const pattern = bookType ? `book:book-type:${bookType}:*` : `book:*`;
-  await Promise.all([clearCacheByPattern(pattern), invalidateDashboardCache()]);
+  await Promise.all([
+    clearCacheByPattern([pattern, "member:books:*"]),
+    invalidateDashboardCache(),
+  ]);
 };
 
 export const findBooksWithPagination = async (
