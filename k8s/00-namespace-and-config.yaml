@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sitako
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sitako-config
+  namespace: sitako
+data:
+  APP_NAME: "SITAKO-backend"
+  APP_ENV: "production"
+  NODE_ENV: "production"
+  PORT: "8080"
+  APP_URL: "http://sitako.local"
+  ALLOWED_ORIGIN: "*"
+  LOG_LEVEL: "info"
+
+  # Database host & port (sesuai nama Service K3s di 01-postgres.yaml)
+  POSTGRES_HOST: "database"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "mydb"
+
+  # Redis host & port (sesuai nama Service K3s di 02-redis.yaml)
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # Email & Third-party non-secret endpoints
+  MAIL_HOST: "smtp.gmail.com"
+  MAIL_PORT: "465"
+  TRIPAY_API_URL: "https://tripay.co.id/api-sandbox/"
+  S3_ENDPOINT: "https://account-id.r2.cloudflarestorage.com"
+  S3_BUCKET_NAME: "sitako-bucket"
+  PUBLIC_STORAGE_URL: "https://pub-xxxxxx.r2.dev"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sitako-secret
+  namespace: sitako
+type: Opaque
+# Catatan: stringData memungkinkan Anda mengisi nilai teks biasa.
+# K3s/Kubernetes akan otomatis mengonversinya menjadi Base64 saat di-apply.
+stringData:
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "password"
+
+  JWT_SECRET: "ganti-dengan-secret-jwt-yang-kuat"
+  CAPTCHA_SECRET: "ganti-dengan-secret-captcha"
+
+  TRIPAY_API_KEY: ""
+  TRIPAY_PRIVATE_KEY: ""
+  TRIPAY_MERCHANT_CODE: ""
+
+  MAIL_USER: "email-kamu@gmail.com"
+  MAIL_PASS: "app-password-kamu"
+  MAIL_FROM: "email-kamu@gmail.com"
+
+  S3_ACCESS_KEY_ID: ""
+  S3_SECRET_ACCESS_KEY: ""

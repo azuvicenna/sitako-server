@@ -9,7 +9,7 @@ scrape_configs:
   # Prometheus memonitor dirinya sendiri
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets: ["localhost:9091"]
 
   # App SITAKO-backend (Express + prom-client di endpoint /metrics)
   - job_name: "sitako-app"

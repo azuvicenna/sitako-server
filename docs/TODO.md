@@ -22,6 +22,7 @@
 - [ ] Membuat fitur cetak laporan typst dan excel/csv
 - [ ] Membuat cronjob/scheduler notifikasi email otomatis
 - [ ] Beberapa GET untuk member belum ada seperti dashboard dan book list
+- [ ] Menambahkan load balancer ke docker
 
 ---
 
