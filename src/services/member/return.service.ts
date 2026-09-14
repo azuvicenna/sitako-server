@@ -5,6 +5,10 @@ import {
   findTransaction,
   updateTransactionStatus,
 } from "@/repositories/member/transaction.repository";
+import {
+  notifyLoanStatusChange,
+  formatIndonesianDate,
+} from "@/services/notification/email-notification.service";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const RETURNABLE_STATUSES: readonly string[] = ["Dipinjam", "Terlambat"];
@@ -68,6 +72,16 @@ export const returnBook = async (
   if (!isLate) {
     await updateTransactionStatus(transactionId, "Dikembalikan");
 
+    notifyLoanStatusChange({
+      email: transaction.emailAnggota,
+      namaAnggota: transaction.namaAnggota,
+      judulBuku: transaction.judulBuku,
+      kdTransaksi: transaction.kdTransaksi,
+      status: "Dikembalikan",
+      tglPinjam: formatIndonesianDate(transaction.tglPinjam),
+      tglKembali: formatIndonesianDate(transaction.tglKembali),
+    });
+
     return {
       status: "Dikembalikan",
       isTerlambat: false,
@@ -105,6 +119,17 @@ export const returnBook = async (
   const message = isBookLost
     ? "Buku dilaporkan hilang. Menunggu konfirmasi dan pembayaran denda dari pustakawan."
     : "Pengembalian berhasil diajukan. Terdapat denda keterlambatan yang menunggu konfirmasi pembayaran dari pustakawan.";
+
+  notifyLoanStatusChange({
+    email: transaction.emailAnggota,
+    namaAnggota: transaction.namaAnggota,
+    judulBuku: transaction.judulBuku,
+    kdTransaksi: transaction.kdTransaksi,
+    status: newStatus,
+    tglPinjam: formatIndonesianDate(transaction.tglPinjam),
+    tglKembali: formatIndonesianDate(transaction.tglKembali),
+    pesanTambahan: message,
+  });
 
   return {
     status: newStatus,

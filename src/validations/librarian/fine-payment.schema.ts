@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paymentMethodEnum } from "@/db/schema";
+import { paymentMethodEnum, paymentStatusEnum } from "@/db/schema";
 
 export const createFinePaymentSchema = z.object({
   pustakawanId: z
@@ -32,7 +32,13 @@ export const createFinePaymentSchema = z.object({
     .default("Tunai"),
 });
 
-export const updateFinePaymentSchema = createFinePaymentSchema.partial();
+export const updateFinePaymentSchema = createFinePaymentSchema
+  .extend({
+    paymentStatus: z.enum(paymentStatusEnum.enumValues, {
+      message: "Status pembayaran tidak valid",
+    }),
+  })
+  .partial();
 
 export type CreateFinePayment = z.infer<typeof createFinePaymentSchema>;
 export type UpdateFinePayment = z.infer<typeof updateFinePaymentSchema>;

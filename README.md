@@ -14,6 +14,8 @@ Berikut adalah beberapa teknologi utama yang digunakan beserta fungsinya:
 - **Redis**: In-memory data store yang dipakai untuk caching agar respons aplikasi lebih cepat.
 - **Cloudflare R2**: Layanan object storage yang kompatibel dengan S3 API, digunakan untuk menyimpan file seperti gambar, dokumen, atau aset lainnya.
 - **Tripay**: Payment gateway terintegrasi untuk menangani transaksi pembayaran denda perpustakaan.
+- **Node-Cron & PostgreSQL Distributed Lock**: Penjadwal tugas otomatis harian untuk pengingat pengembalian buku dan pembaruan status keterlambatan yang aman untuk multi-container/cluster.
+- **Nodemailer**: Layanan pengiriman email notifikasi otomatis (pengingat jatuh tempo, status transaksi, tagihan denda, dan kuitansi pembayaran).
 - **Jest & Supertest**: Framework testing untuk pengujian otomatis (Unit, Integration, dan Feature tests).
 - **k6**: Framework modern untuk load testing dan performance profiling API.
 - **Prometheus & Exporters**: Monitoring stack untuk mengumpulkan dan memvisualisasikan metrics performa aplikasi, PostgreSQL, dan Redis.
@@ -32,7 +34,8 @@ Berikut adalah rincian fungsi dari masing-masing dependencies utama yang terdaft
 - **`drizzle-orm`**: TypeScript ORM yang ringan dan cepat untuk berinteraksi dengan database PostgreSQL.
 - **`express`**: Framework web minimalis untuk membangun RESTful API di Node.js.
 - **`jsonwebtoken`**: Untuk membuat dan memverifikasi JSON Web Token (JWT) untuk sistem otentikasi.
-- **`nodemailer`**: Library untuk mengirim email (misal: verifikasi akun, reset password) via SMTP.
+- **`node-cron`**: Task scheduler berbasis Node.js untuk menjalankan tugas terjadwal di latar belakang (seperti auto-update status transaksi keterlambatan dan pengiriman email pengingat pengembalian buku harian).
+- **`nodemailer`**: Library untuk mengirim email notifikasi otomatis (peringatan jatuh tempo peminjaman, perubahan status transaksi, tagihan denda, dan bukti pembayaran lunas) via SMTP.
 - **`pg`**: Node.js client murni untuk PostgreSQL (koneksi database utama).
 - **`prom-client`**: Mengumpulkan dan menghitung metrics, lalu menyajikannya dalam format yang bisa dibaca Prometheus.
 - **`redis`**: Client Redis resmi untuk Node.js guna mengelola cache dan session.

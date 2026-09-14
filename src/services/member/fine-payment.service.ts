@@ -4,10 +4,11 @@ import {
 } from "@/repositories/member/fine-payment.repository";
 import { insertFinePayment } from "@/repositories/librarian/fine-payment.repository";
 import { db } from "@/db";
-import { transactions, fines, members } from "@/db/schema";
+import { transactions, fines, members, books } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createTransaction } from "@/utils/services/tripay";
 import { generateTransactionCode } from "@/utils/generators/transaction-code";
+import { notifyFineInvoice } from "@/services/notification/email-notification.service";
 
 interface TripayTransactionData {
   reference: string;
@@ -112,7 +113,7 @@ export const initiateOnlinePayment = async (
 
   const tripayData = tripayResponse.data as TripayTransactionData;
 
-  return insertFinePayment({
+  const createdPayment = await insertFinePayment({
     anggotaId: memberId,
     transaksiId: transactionId,
     hargaDenda: fineRule.hargaDenda,
@@ -123,4 +124,25 @@ export const initiateOnlinePayment = async (
     paymentMethodCode,
     checkoutUrl: tripayData.checkout_url,
   });
+
+  const book = await db.query.books.findFirst({
+    where: eq(books.id, transaction.bukuId),
+  });
+
+  if (member?.email) {
+    notifyFineInvoice({
+      email: member.email,
+      namaAnggota: member.nama,
+      judulBuku: book?.judul ?? "Buku Perpustakaan",
+      kdTransaksi: transaction.kdTransaksi,
+      jenisDenda: fineType,
+      totalDenda: totalFine,
+      metodePembayaran: "Non-Tunai",
+      checkoutUrl: tripayData.checkout_url,
+      paymentMethodCode,
+      tripayReference: tripayData.reference,
+    });
+  }
+
+  return createdPayment;
 };

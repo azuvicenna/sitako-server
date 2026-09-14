@@ -52,9 +52,12 @@ describe("sendEmail Unit Test", () => {
       "<p>Halo Bos</p>",
     );
 
-    expect(logger.error).toHaveBeenCalledWith("Error sending email:", {
-      error: testError,
-    });
+    expect(logger.error).toHaveBeenCalledWith(
+      "Error sending email to target@example.com: SMTP Connection Timeout",
+      {
+        error: testError,
+      },
+    );
     expect(result).toEqual({ success: false, error: testError });
   });
 });

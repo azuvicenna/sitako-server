@@ -5,6 +5,13 @@ import {
   updateFinePaymentById,
 } from "@/repositories/librarian/fine-payment.repository";
 import logger from "@/utils/core/logger";
+import { db } from "@/db";
+import { members, books, transactions } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import {
+  notifyFinePaymentSuccess,
+  formatIndonesianDate,
+} from "@/services/notification/email-notification.service";
 
 const isValidSignature = (
   rawBody: string,
@@ -69,10 +76,36 @@ export const tripayWebhook = async (req: Request, res: Response) => {
     }
 
     if (status === "PAID") {
-      await updateFinePaymentById(payment.id, {
+      const updatedPayment = await updateFinePaymentById(payment.id, {
         paymentStatus: "PAID",
         tglBayar: new Date(),
       });
+
+      const [memberAndBook] = await db
+        .select({
+          email: members.email,
+          namaAnggota: members.nama,
+          judulBuku: books.judul,
+          kdTransaksi: transactions.kdTransaksi,
+        })
+        .from(members)
+        .innerJoin(transactions, eq(transactions.anggotaId, members.id))
+        .innerJoin(books, eq(transactions.bukuId, books.id))
+        .where(eq(transactions.id, payment.transaksiId))
+        .limit(1);
+
+      if (memberAndBook && updatedPayment) {
+        notifyFinePaymentSuccess({
+          email: memberAndBook.email,
+          namaAnggota: memberAndBook.namaAnggota,
+          judulBuku: memberAndBook.judulBuku,
+          kdTransaksi: memberAndBook.kdTransaksi,
+          totalDenda: updatedPayment.totalDenda,
+          metodePembayaran: updatedPayment.metodePembayaran,
+          tglBayar: formatIndonesianDate(updatedPayment.tglBayar),
+          tripayReference: updatedPayment.tripayReference,
+        });
+      }
     } else if (status === "EXPIRED" || status === "FAILED") {
       await updateFinePaymentById(payment.id, {
         paymentStatus: status,

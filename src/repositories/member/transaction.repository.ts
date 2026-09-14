@@ -96,6 +96,7 @@ export const findTransaction = async (id: string, anggotaId: string) => {
       tglKembali: transactions.tglKembali,
       status: transactions.status,
       namaAnggota: members.nama,
+      emailAnggota: members.email,
       namaPustakawan: librarians.nama,
       judulBuku: books.judul,
       bukuId: transactions.bukuId,

@@ -18,8 +18,6 @@
 
 ## 📋 Antrean (Backlog / To Do)
 
-- [ ] Rencana penambahan fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
-- [ ] Membuat cronjob/scheduler notifikasi email otomatis
 - [ ] Menambahkan load balancer ke docker
 
 ---
@@ -32,6 +30,8 @@
 
 ## ✅ Selesai (Completed)
 
+- [x] Fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
+- [x] Membuat cronjob/scheduler notifikasi email otomatis (dengan PostgreSQL distributed lock & reminder logs)
 - [x] Endpoint GET dashboard untuk member (`/api/member/dashboard`)
 - [x] Endpoint GET bookmark untuk member (`/api/book/bookmark`)
 - [x] Endpoint GET katalog daftar buku untuk member (`/api/book`)

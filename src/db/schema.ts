@@ -6,6 +6,7 @@ import {
   text,
   uniqueIndex,
   timestamp,
+  date,
 } from "drizzle-orm/pg-core";
 import { generateId } from "@/utils/generators/ulid";
 
@@ -197,3 +198,34 @@ export const finePayments = pgTable("payments", {
   checkoutUrl: text("checkout_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const schedulerLocks = pgTable("scheduler_locks", {
+  jobName: text("job_name").primaryKey(),
+  lockedBy: text("locked_by").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const reminderLogs = pgTable(
+  "reminder_logs",
+  {
+    id: text("id").primaryKey().$defaultFn(generateId),
+    transaksiId: text("transaksi_id")
+      .notNull()
+      .references(() => transactions.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    tipePengingat: text("tipe_pengingat").notNull(),
+    sentDate: date("sent_date").notNull(),
+    sentAt: timestamp("sent_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("reminder_tx_type_date_idx").on(
+      table.transaksiId,
+      table.tipePengingat,
+      table.sentDate,
+    ),
+  ],
+);
+
