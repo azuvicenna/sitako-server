@@ -6,35 +6,35 @@
 
 // Mock enum values yang dipakai oleh Zod validation schemas
 export const bookTypeEnum = {
-  enumValues: ["Fisik", "Digital"] as const,
+  enumValues: ['Fisik', 'Digital'] as const,
 };
 
 export const fineTypeEnum = {
-  enumValues: ["Terlambat", "Hilang"] as const,
+  enumValues: ['Terlambat', 'Hilang'] as const,
 };
 
 export const calculationTypeEnum = {
-  enumValues: ["Akumulasi", "Flat"] as const,
+  enumValues: ['Akumulasi', 'Flat'] as const,
 };
 
 export const transactionStatusEnum = {
   enumValues: [
-    "Menunggu Persetujuan",
-    "Dibatalkan",
-    "Menunggu Diambil",
-    "Dipinjam",
-    "Dikembalikan",
-    "Terlambat",
-    "Tidak Mengembalikan",
+    'Menunggu Persetujuan',
+    'Dibatalkan',
+    'Menunggu Diambil',
+    'Dipinjam',
+    'Dikembalikan',
+    'Terlambat',
+    'Tidak Mengembalikan',
   ] as const,
 };
 
 export const paymentMethodEnum = {
-  enumValues: ["Tunai", "Non-Tunai"] as const,
+  enumValues: ['Tunai', 'Non-Tunai'] as const,
 };
 
 export const paymentStatusEnum = {
-  enumValues: ["UNPAID", "PAID", "EXPIRED", "FAILED"] as const,
+  enumValues: ['UNPAID', 'PAID', 'EXPIRED', 'FAILED'] as const,
 };
 
 // Tabel mock (tidak dipakai langsung, tapi perlu diekspor untuk schema.ts)

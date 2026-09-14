@@ -1,8 +1,8 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { bookmarks, books, finePayments, transactions } from "@/db/schema";
-import { withCache } from "@/utils/data/repository";
-import { clearCacheByPattern } from "@/utils/core/cache";
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import { bookmarks, books, finePayments, transactions } from '@/db/schema';
+import { withCache } from '@/utils/data/repository';
+import { clearCacheByPattern } from '@/utils/core/cache';
 
 export interface MemberDashboardStatistics {
   bukuDipinjam: number;
@@ -43,15 +43,11 @@ export interface MemberDashboardData {
 }
 
 export const invalidateMemberDashboardCache = async (memberId?: string) => {
-  const pattern = memberId
-    ? `dashboard:member:${memberId}`
-    : "dashboard:member:*";
+  const pattern = memberId ? `dashboard:member:${memberId}` : 'dashboard:member:*';
   await clearCacheByPattern(pattern);
 };
 
-export const getMemberDashboardRepo = async (
-  memberId: string,
-): Promise<MemberDashboardData> => {
+export const getMemberDashboardRepo = async (memberId: string): Promise<MemberDashboardData> => {
   return withCache(`dashboard:member:${memberId}`, 60, async () => {
     const [
       [borrowedStats],
@@ -66,24 +62,14 @@ export const getMemberDashboardRepo = async (
           bukuDipinjam: sql<number>`count(*)::int`,
         })
         .from(transactions)
-        .where(
-          and(
-            eq(transactions.anggotaId, memberId),
-            eq(transactions.status, "Dipinjam"),
-          ),
-        ),
+        .where(and(eq(transactions.anggotaId, memberId), eq(transactions.status, 'Dipinjam'))),
 
       db
         .select({
           totalDenda: sql<number>`coalesce(sum(${finePayments.totalDenda}), 0)::int`,
         })
         .from(finePayments)
-        .where(
-          and(
-            eq(finePayments.anggotaId, memberId),
-            eq(finePayments.paymentStatus, "UNPAID"),
-          ),
-        ),
+        .where(and(eq(finePayments.anggotaId, memberId), eq(finePayments.paymentStatus, 'UNPAID'))),
 
       db
         .select({
@@ -106,10 +92,10 @@ export const getMemberDashboardRepo = async (
           and(
             eq(transactions.anggotaId, memberId),
             inArray(transactions.status, [
-              "Menunggu Persetujuan",
-              "Menunggu Diambil",
-              "Dipinjam",
-              "Terlambat",
+              'Menunggu Persetujuan',
+              'Menunggu Diambil',
+              'Dipinjam',
+              'Terlambat',
             ]),
           ),
         )
@@ -123,12 +109,7 @@ export const getMemberDashboardRepo = async (
           checkoutUrl: finePayments.checkoutUrl,
         })
         .from(finePayments)
-        .where(
-          and(
-            eq(finePayments.anggotaId, memberId),
-            eq(finePayments.paymentStatus, "UNPAID"),
-          ),
-        )
+        .where(and(eq(finePayments.anggotaId, memberId), eq(finePayments.paymentStatus, 'UNPAID')))
         .orderBy(desc(finePayments.createdAt))
         .limit(5),
 
@@ -146,35 +127,30 @@ export const getMemberDashboardRepo = async (
         .limit(5),
     ]);
 
-    const activeTransactions: MemberActiveTransaction[] =
-      activeTransactionsRaw.map((trx) => ({
-        id: trx.id,
-        buku: {
-          judul: trx.judul,
-          cover: trx.cover,
-        },
-        tglKembali: trx.tglKembali,
-        status: trx.status,
-      }));
+    const activeTransactions: MemberActiveTransaction[] = activeTransactionsRaw.map((trx) => ({
+      id: trx.id,
+      buku: {
+        judul: trx.judul,
+        cover: trx.cover,
+      },
+      tglKembali: trx.tglKembali,
+      status: trx.status,
+    }));
 
-    const unpaidFinePayments: MemberFineBill[] = unpaidFinePaymentsRaw.map(
-      (fine) => ({
-        id: fine.id,
-        totalDenda: fine.totalDenda,
-        checkoutUrl: fine.checkoutUrl,
-      }),
-    );
+    const unpaidFinePayments: MemberFineBill[] = unpaidFinePaymentsRaw.map((fine) => ({
+      id: fine.id,
+      totalDenda: fine.totalDenda,
+      checkoutUrl: fine.checkoutUrl,
+    }));
 
-    const recentBookmarks: MemberRecentBookmark[] = recentBookmarksRaw.map(
-      (bm) => ({
-        id: bm.id,
-        buku: {
-          judul: bm.judul,
-          penulis: bm.penulis,
-          cover: bm.cover,
-        },
-      }),
-    );
+    const recentBookmarks: MemberRecentBookmark[] = recentBookmarksRaw.map((bm) => ({
+      id: bm.id,
+      buku: {
+        judul: bm.judul,
+        penulis: bm.penulis,
+        cover: bm.cover,
+      },
+    }));
 
     return {
       statistik: {

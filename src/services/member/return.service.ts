@@ -1,20 +1,20 @@
-import { eq, and } from "drizzle-orm";
-import { db } from "@/db";
-import { fines } from "@/db/schema";
+import { eq, and } from 'drizzle-orm';
+import { db } from '@/db';
+import { fines } from '@/db/schema';
 import {
   findTransaction,
   updateTransactionStatus,
-} from "@/repositories/member/transaction.repository";
+} from '@/repositories/member/transaction.repository';
 import {
   notifyLoanStatusChange,
   formatIndonesianDate,
-} from "@/services/notification/email-notification.service";
+} from '@/services/notification/email-notification.service';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const RETURNABLE_STATUSES: readonly string[] = ["Dipinjam", "Terlambat"];
+const RETURNABLE_STATUSES: readonly string[] = ['Dipinjam', 'Terlambat'];
 
 export interface ReturnFineDetail {
-  jenisDenda: "Terlambat" | "Hilang";
+  jenisDenda: 'Terlambat' | 'Hilang';
   hargaDenda: number;
   metodePerhitungan: string;
   hariTerlambat: number;
@@ -22,7 +22,7 @@ export interface ReturnFineDetail {
 }
 
 export interface ReturnBookResult {
-  status: "Dikembalikan" | "Terlambat" | "Tidak Mengembalikan";
+  status: 'Dikembalikan' | 'Terlambat' | 'Tidak Mengembalikan';
   isTerlambat: boolean;
   isBukuHilang: boolean;
   denda: ReturnFineDetail | null;
@@ -34,10 +34,7 @@ const calculateDaysLate = (dueDate: Date, now: Date): number => {
   return Math.max(1, Math.floor(diff / ONE_DAY_MS));
 };
 
-const getFineRule = async (
-  bookId: string,
-  fineType: "Terlambat" | "Hilang",
-) => {
+const getFineRule = async (bookId: string, fineType: 'Terlambat' | 'Hilang') => {
   const result = await db
     .select()
     .from(fines)
@@ -64,44 +61,41 @@ export const returnBook = async (
   }
 
   const now = new Date();
-  const dueDate = transaction.tglKembali
-    ? new Date(transaction.tglKembali)
-    : null;
+  const dueDate = transaction.tglKembali ? new Date(transaction.tglKembali) : null;
   const isLate = dueDate ? now.getTime() > dueDate.getTime() : false;
 
   if (!isLate) {
-    await updateTransactionStatus(transactionId, "Dikembalikan");
+    await updateTransactionStatus(transactionId, 'Dikembalikan');
 
     notifyLoanStatusChange({
       email: transaction.emailAnggota,
       namaAnggota: transaction.namaAnggota,
       judulBuku: transaction.judulBuku,
       kdTransaksi: transaction.kdTransaksi,
-      status: "Dikembalikan",
+      status: 'Dikembalikan',
       tglPinjam: formatIndonesianDate(transaction.tglPinjam),
       tglKembali: formatIndonesianDate(transaction.tglKembali),
     });
 
     return {
-      status: "Dikembalikan",
+      status: 'Dikembalikan',
       isTerlambat: false,
       isBukuHilang: false,
       denda: null,
-      pesan:
-        "Pengembalian berhasil diajukan. Menunggu konfirmasi fisik dari pustakawan.",
+      pesan: 'Pengembalian berhasil diajukan. Menunggu konfirmasi fisik dari pustakawan.',
     };
   }
 
   const daysLate = calculateDaysLate(dueDate!, now);
-  const fineType = isBookLost ? "Hilang" : "Terlambat";
-  const newStatus = isBookLost ? "Tidak Mengembalikan" : "Terlambat";
+  const fineType = isBookLost ? 'Hilang' : 'Terlambat';
+  const newStatus = isBookLost ? 'Tidak Mengembalikan' : 'Terlambat';
 
   await updateTransactionStatus(transactionId, newStatus);
 
   const fineRule = await getFineRule(transaction.bukuId, fineType);
 
   const totalFine = fineRule
-    ? fineRule.metodePerhitungan === "Akumulasi"
+    ? fineRule.metodePerhitungan === 'Akumulasi'
       ? fineRule.hargaDenda * daysLate
       : fineRule.hargaDenda
     : 0;
@@ -117,8 +111,8 @@ export const returnBook = async (
     : null;
 
   const message = isBookLost
-    ? "Buku dilaporkan hilang. Menunggu konfirmasi dan pembayaran denda dari pustakawan."
-    : "Pengembalian berhasil diajukan. Terdapat denda keterlambatan yang menunggu konfirmasi pembayaran dari pustakawan.";
+    ? 'Buku dilaporkan hilang. Menunggu konfirmasi dan pembayaran denda dari pustakawan.'
+    : 'Pengembalian berhasil diajukan. Terdapat denda keterlambatan yang menunggu konfirmasi pembayaran dari pustakawan.';
 
   notifyLoanStatusChange({
     email: transaction.emailAnggota,

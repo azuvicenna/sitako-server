@@ -7,9 +7,9 @@ export interface BaseEmailOptions {
 
 export const renderBaseEmailLayout = ({
   title,
-  previewText = "",
+  previewText = '',
   contentHtml,
-  appUrl = process.env.APP_URL || "http://localhost:3000",
+  appUrl = process.env.APP_URL || 'http://localhost:3000',
 }: BaseEmailOptions): string => {
   const currentYear = new Date().getFullYear();
 
@@ -136,7 +136,7 @@ export const renderBaseEmailLayout = ({
   </style>
 </head>
 <body>
-  ${previewText ? `<div class="preview-text">${previewText}</div>` : ""}
+  ${previewText ? `<div class="preview-text">${previewText}</div>` : ''}
   <div class="wrapper">
     <table class="container" cellpadding="0" cellspacing="0" width="100%">
       <tr>

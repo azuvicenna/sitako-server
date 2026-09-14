@@ -86,7 +86,7 @@ export function browseBooksScenario(data) {
 
   const res = http.get(
     `${config.BASE_URL}/books?bookType=${bookType}&page=${randomPage}&limit=10`,
-    headers
+    headers,
   );
 
   check(res, {

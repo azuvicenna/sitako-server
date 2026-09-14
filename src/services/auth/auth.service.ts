@@ -1,13 +1,10 @@
-import bcrypt from "bcrypt";
-import {
-  findLibrarianByNip,
-  findMemberByNis,
-} from "@/repositories/auth/auth.repository";
-import type { LibrarianSelect } from "@/repositories/librarian/librarian.repository";
-import type { MemberSelect } from "@/repositories/librarian/member.repository";
-import { generateToken } from "@/utils/auth/jwt";
+import bcrypt from 'bcrypt';
+import { findLibrarianByNip, findMemberByNis } from '@/repositories/auth/auth.repository';
+import type { LibrarianSelect } from '@/repositories/librarian/librarian.repository';
+import type { MemberSelect } from '@/repositories/librarian/member.repository';
+import { generateToken } from '@/utils/auth/jwt';
 
-export type SafeUser = Omit<LibrarianSelect | MemberSelect, "password">;
+export type SafeUser = Omit<LibrarianSelect | MemberSelect, 'password'>;
 
 export interface AuthResponse {
   user: SafeUser;
@@ -26,7 +23,7 @@ export const authenticateUser = async (
   const isValid = await bcrypt.compare(pass, rawUser.password);
   if (!isValid) return null;
 
-  const role = librarian ? "Pustakawan" : "Anggota";
+  const role = librarian ? 'Pustakawan' : 'Anggota';
   const token = generateToken({ id: rawUser.id, role });
 
   const { password: _, ...user } = rawUser;

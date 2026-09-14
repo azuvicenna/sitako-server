@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 import {
   insertBook,
   updateBookById,
@@ -7,17 +7,14 @@ import {
   findBooksWithPagination,
   type BookInsert,
   BookSelect,
-} from "@/repositories/librarian/book.repository";
-import { deleteFile, uploadFile } from "@/utils/services/storage";
-import type {
-  CreateBook,
-  UpdateBook,
-} from "@/validations/librarian/book.schema";
-import logger from "@/utils/core/logger";
+} from '@/repositories/librarian/book.repository';
+import { deleteFile, uploadFile } from '@/utils/services/storage';
+import type { CreateBook, UpdateBook } from '@/validations/librarian/book.schema';
+import logger from '@/utils/core/logger';
 
-const extractFileKey = (url: string) => url.split("/").slice(-2).join("/");
+const extractFileKey = (url: string) => url.split('/').slice(-2).join('/');
 
-const safeDeleteFile = async (url?: string | null, label = "file") => {
+const safeDeleteFile = async (url?: string | null, label = 'file') => {
   if (!url) return;
   try {
     await deleteFile(extractFileKey(url));
@@ -27,17 +24,14 @@ const safeDeleteFile = async (url?: string | null, label = "file") => {
   }
 };
 
-const uploadWithUniqueName = async (
-  folder: string,
-  file: Express.Multer.File,
-) => {
-  const ext = file.originalname.split(".").pop();
+const uploadWithUniqueName = async (folder: string, file: Express.Multer.File) => {
+  const ext = file.originalname.split('.').pop();
   const filename = ext ? `${uuidv4()}.${ext}` : uuidv4();
   return uploadFile(folder, file, filename);
 };
 
 export const getBooksWithPagination = async (
-  bookType: BookSelect["tipeBuku"],
+  bookType: BookSelect['tipeBuku'],
   page: number,
   limit: number,
   search: string,
@@ -55,23 +49,21 @@ export const createNewBook = async (
   coverFile?: Express.Multer.File,
   pdfFile?: Express.Multer.File,
 ) => {
-  let cover = "";
+  let cover = '';
   let file: string | null = null;
 
   try {
     if (coverFile) {
-      cover = await uploadWithUniqueName("covers", coverFile);
+      cover = await uploadWithUniqueName('covers', coverFile);
     }
 
-    if (bookTypeParam.toLowerCase() === "digital" && pdfFile) {
-      file = await uploadWithUniqueName("books", pdfFile);
+    if (bookTypeParam.toLowerCase() === 'digital' && pdfFile) {
+      file = await uploadWithUniqueName('books', pdfFile);
     }
 
     const bookData: BookInsert = {
       ...payload,
-      tipeBuku: (payload.tipeBuku || bookTypeParam) as NonNullable<
-        BookInsert["tipeBuku"]
-      >,
+      tipeBuku: (payload.tipeBuku || bookTypeParam) as NonNullable<BookInsert['tipeBuku']>,
       cover,
       file,
     };
@@ -79,8 +71,8 @@ export const createNewBook = async (
     return await insertBook(bookData);
   } catch (error) {
     await Promise.all([
-      cover ? safeDeleteFile(cover, "orphaned cover") : null,
-      file ? safeDeleteFile(file, "orphaned book file") : null,
+      cover ? safeDeleteFile(cover, 'orphaned cover') : null,
+      file ? safeDeleteFile(file, 'orphaned book file') : null,
     ]);
     throw error;
   }
@@ -101,14 +93,14 @@ export const updateExistingBook = async (
 
   try {
     if (coverFile) {
-      newCover = await uploadWithUniqueName("covers", coverFile);
+      newCover = await uploadWithUniqueName('covers', coverFile);
       updateData.cover = newCover;
     }
 
     if (pdfFile) {
-      newFile = await uploadWithUniqueName("books", pdfFile);
+      newFile = await uploadWithUniqueName('books', pdfFile);
       updateData.file = newFile;
-    } else if (payload.tipeBuku === "Fisik" && existingBook.file) {
+    } else if (payload.tipeBuku === 'Fisik' && existingBook.file) {
       updateData.file = null;
     }
 
@@ -119,19 +111,17 @@ export const updateExistingBook = async (
     const updated = await updateBookById(id, updateData);
 
     await Promise.all([
-      coverFile && existingBook.cover
-        ? safeDeleteFile(existingBook.cover, "old cover")
-        : null,
-      (pdfFile || payload.tipeBuku === "Fisik") && existingBook.file
-        ? safeDeleteFile(existingBook.file, "old book file")
+      coverFile && existingBook.cover ? safeDeleteFile(existingBook.cover, 'old cover') : null,
+      (pdfFile || payload.tipeBuku === 'Fisik') && existingBook.file
+        ? safeDeleteFile(existingBook.file, 'old book file')
         : null,
     ]);
 
     return updated;
   } catch (error) {
     await Promise.all([
-      newCover ? safeDeleteFile(newCover, "orphaned cover") : null,
-      newFile ? safeDeleteFile(newFile, "orphaned book file") : null,
+      newCover ? safeDeleteFile(newCover, 'orphaned cover') : null,
+      newFile ? safeDeleteFile(newFile, 'orphaned book file') : null,
     ]);
     throw error;
   }
@@ -145,8 +135,8 @@ export const deleteExistingBook = async (id: string) => {
 
   if (deletedBook) {
     await Promise.all([
-      safeDeleteFile(book.cover, "cover file"),
-      safeDeleteFile(book.file, "book file"),
+      safeDeleteFile(book.cover, 'cover file'),
+      safeDeleteFile(book.file, 'book file'),
     ]);
   }
 

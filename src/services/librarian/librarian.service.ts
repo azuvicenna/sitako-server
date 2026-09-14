@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
-import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
 import {
   insertLibrarian,
   updateLibrarianById,
@@ -8,17 +8,14 @@ import {
   removeLibrarianById,
   findLibrariansWithPagination,
   type LibrarianInsert,
-} from "@/repositories/librarian/librarian.repository";
-import { deleteFile, uploadFile } from "@/utils/services/storage";
-import type {
-  CreateLibrarian,
-  UpdateLibrarian,
-} from "@/validations/librarian/librarian.schema";
-import logger from "@/utils/core/logger";
+} from '@/repositories/librarian/librarian.repository';
+import { deleteFile, uploadFile } from '@/utils/services/storage';
+import type { CreateLibrarian, UpdateLibrarian } from '@/validations/librarian/librarian.schema';
+import logger from '@/utils/core/logger';
 
-const extractFileKey = (url: string) => url.split("/").slice(-2).join("/");
+const extractFileKey = (url: string) => url.split('/').slice(-2).join('/');
 
-const safeDeleteFile = async (url?: string | null, label = "file") => {
+const safeDeleteFile = async (url?: string | null, label = 'file') => {
   if (!url) return;
   try {
     await deleteFile(extractFileKey(url));
@@ -28,11 +25,8 @@ const safeDeleteFile = async (url?: string | null, label = "file") => {
   }
 };
 
-const uploadWithUniqueName = async (
-  folder: string,
-  file: Express.Multer.File,
-) => {
-  const ext = file.originalname.split(".").pop();
+const uploadWithUniqueName = async (folder: string, file: Express.Multer.File) => {
+  const ext = file.originalname.split('.').pop();
   const filename = ext ? `${uuidv4()}.${ext}` : uuidv4();
   return uploadFile(folder, file, filename);
 };
@@ -54,11 +48,11 @@ export const createNewLibrarian = async (
   payload: CreateLibrarian,
   photoFile?: Express.Multer.File,
 ) => {
-  let photoUrl = "";
+  let photoUrl = '';
 
   try {
     if (photoFile) {
-      photoUrl = await uploadWithUniqueName("profiles", photoFile);
+      photoUrl = await uploadWithUniqueName('profiles', photoFile);
     }
 
     const hashedPassword = await bcrypt.hash(payload.password, 10);
@@ -79,7 +73,7 @@ export const createNewLibrarian = async (
     return librarianWithoutPassword;
   } catch (error) {
     if (photoUrl) {
-      await safeDeleteFile(photoUrl, "orphaned profile photo");
+      await safeDeleteFile(photoUrl, 'orphaned profile photo');
     }
     throw error;
   }
@@ -102,7 +96,7 @@ export const updateExistingLibrarian = async (
     }
 
     if (photoFile) {
-      newPhotoUrl = await uploadWithUniqueName("profiles", photoFile);
+      newPhotoUrl = await uploadWithUniqueName('profiles', photoFile);
       updateData.foto = newPhotoUrl;
     }
 
@@ -115,14 +109,14 @@ export const updateExistingLibrarian = async (
     if (!updated) return null;
 
     if (photoFile && existingLibrarian.foto) {
-      await safeDeleteFile(existingLibrarian.foto, "old profile photo");
+      await safeDeleteFile(existingLibrarian.foto, 'old profile photo');
     }
 
     const { password: _, ...librarianWithoutPassword } = updated;
     return librarianWithoutPassword;
   } catch (error) {
     if (newPhotoUrl) {
-      await safeDeleteFile(newPhotoUrl, "orphaned profile photo");
+      await safeDeleteFile(newPhotoUrl, 'orphaned profile photo');
     }
     throw error;
   }
@@ -135,7 +129,7 @@ export const deleteExistingLibrarian = async (id: string) => {
   const deleted = await removeLibrarianById(id);
 
   if (deleted && existingLibrarian.foto) {
-    await safeDeleteFile(existingLibrarian.foto, "profile photo on delete");
+    await safeDeleteFile(existingLibrarian.foto, 'profile photo on delete');
   }
 
   return deleted;

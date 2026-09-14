@@ -1,15 +1,10 @@
-import os from "os";
-import { sql } from "drizzle-orm";
-import { db } from "@/db";
-import logger from "@/utils/core/logger";
+import os from 'os';
+import { sql } from 'drizzle-orm';
+import { db } from '@/db';
+import logger from '@/utils/core/logger';
 
 export const getInstanceId = (): string => {
-  return (
-    process.env.HOSTNAME ||
-    process.env.POD_NAME ||
-    os.hostname() ||
-    `instance-${process.pid}`
-  );
+  return process.env.HOSTNAME || process.env.POD_NAME || os.hostname() || `instance-${process.pid}`;
 };
 
 export const ensureLockTablesExist = async (): Promise<void> => {
@@ -38,7 +33,7 @@ export const ensureLockTablesExist = async (): Promise<void> => {
       ON reminder_logs (transaksi_id, tipe_pengingat, sent_date);
     `);
   } catch (error) {
-    logger.error("Error ensuring scheduler tables exist:", error);
+    logger.error('Error ensuring scheduler tables exist:', error);
   }
 };
 
@@ -75,10 +70,7 @@ export const acquireDbLock = async (
  * Releases the lock by setting expires_at to NOW(),
  * BUT ONLY IF the lock is currently owned by lockedBy.
  */
-export const releaseDbLock = async (
-  jobName: string,
-  lockedBy: string,
-): Promise<boolean> => {
+export const releaseDbLock = async (jobName: string, lockedBy: string): Promise<boolean> => {
   try {
     const result: any = await db.execute(sql`
       UPDATE scheduler_locks

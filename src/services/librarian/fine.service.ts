@@ -5,17 +5,10 @@ import {
   removeFineById,
   findFinesWithPagination,
   type FineInsert,
-} from "@/repositories/librarian/fine.repository";
-import type {
-  CreateFine,
-  UpdateFine,
-} from "@/validations/librarian/fine.schema";
+} from '@/repositories/librarian/fine.repository';
+import type { CreateFine, UpdateFine } from '@/validations/librarian/fine.schema';
 
-export const getFinesWithPagination = async (
-  page: number,
-  limit: number,
-  search: string,
-) => {
+export const getFinesWithPagination = async (page: number, limit: number, search: string) => {
   return findFinesWithPagination(page, limit, search);
 };
 

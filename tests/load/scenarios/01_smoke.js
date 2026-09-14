@@ -9,7 +9,7 @@ export const options = {
   duration: '30s',
   thresholds: {
     http_req_duration: ['p(99)<1000'], // 99% request harus di bawah 1 detik
-    http_req_failed: ['rate<0.01'],    // Error rate harus di bawah 1%
+    http_req_failed: ['rate<0.01'], // Error rate harus di bawah 1%
   },
 };
 
@@ -20,7 +20,9 @@ export const options = {
 export function setup() {
   const auth = loginAsMember();
   if (!auth.token) {
-    throw new Error('Gagal login di tahap setup smoke test. Pastikan server SITAKO berjalan dan kredensial valid.');
+    throw new Error(
+      'Gagal login di tahap setup smoke test. Pastikan server SITAKO berjalan dan kredensial valid.',
+    );
   }
   return { token: auth.token };
 }
@@ -29,13 +31,19 @@ export default function (data) {
   const headers = authHeaders(data.token);
 
   // 1. Akses halaman Browse Buku Fisik
-  const booksFisikRes = http.get(`${config.BASE_URL}/books?bookType=Fisik&page=1&limit=10`, headers);
+  const booksFisikRes = http.get(
+    `${config.BASE_URL}/books?bookType=Fisik&page=1&limit=10`,
+    headers,
+  );
   check(booksFisikRes, {
     'GET books (Fisik) status 200': (r) => r.status === 200,
   });
 
   // 2. Akses halaman Browse Buku Digital
-  const booksDigitalRes = http.get(`${config.BASE_URL}/books?bookType=Digital&page=1&limit=10`, headers);
+  const booksDigitalRes = http.get(
+    `${config.BASE_URL}/books?bookType=Digital&page=1&limit=10`,
+    headers,
+  );
   check(booksDigitalRes, {
     'GET books (Digital) status 200': (r) => r.status === 200,
   });
@@ -54,4 +62,3 @@ export default function (data) {
 
   sleep(1);
 }
-

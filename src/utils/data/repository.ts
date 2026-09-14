@@ -1,5 +1,5 @@
-import redisClient from "@/config/redis";
-import logger from "@/utils/core/logger";
+import redisClient from '@/config/redis';
+import logger from '@/utils/core/logger';
 
 export interface PaginationMeta {
   page: number;
@@ -46,34 +46,27 @@ export const withCacheAndPagination = async <T>(
   cacheKey: string,
   page: number,
   limit: number,
-  fetchData: (
-    offset: number,
-    limit: number,
-  ) => Promise<{ data: T[]; total: number }>,
+  fetchData: (offset: number, limit: number) => Promise<{ data: T[]; total: number }>,
   ttlSeconds = 60,
 ): Promise<PaginatedResult<T>> => {
-  return withCache(
-    cacheKey,
-    ttlSeconds,
-    async (): Promise<PaginatedResult<T>> => {
-      const safeLimit = Math.max(1, limit);
-      const safePage = Math.max(1, page);
-      const offset = (safePage - 1) * safeLimit;
+  return withCache(cacheKey, ttlSeconds, async (): Promise<PaginatedResult<T>> => {
+    const safeLimit = Math.max(1, limit);
+    const safePage = Math.max(1, page);
+    const offset = (safePage - 1) * safeLimit;
 
-      const { data, total } = await fetchData(offset, safeLimit);
-      const totalPages = Math.ceil(total / safeLimit);
+    const { data, total } = await fetchData(offset, safeLimit);
+    const totalPages = Math.ceil(total / safeLimit);
 
-      return {
-        data,
-        meta: {
-          page: safePage,
-          limit: safeLimit,
-          totalRows: total,
-          totalPages,
-          hasNextPage: safePage < totalPages,
-          hasPrevPage: safePage > 1,
-        },
-      };
-    },
-  );
+    return {
+      data,
+      meta: {
+        page: safePage,
+        limit: safeLimit,
+        totalRows: total,
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPrevPage: safePage > 1,
+      },
+    };
+  });
 };

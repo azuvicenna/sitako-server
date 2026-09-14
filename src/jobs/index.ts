@@ -1,10 +1,10 @@
-import cron from "node-cron";
-import logger from "@/utils/core/logger";
-import { ensureLockTablesExist } from "@/utils/core/db-lock";
-import { runLoanReminderJob } from "./loan-reminder.job";
+import cron from 'node-cron';
+import logger from '@/utils/core/logger';
+import { ensureLockTablesExist } from '@/utils/core/db-lock';
+import { runLoanReminderJob } from './loan-reminder.job';
 
-const DEFAULT_SCHEDULE = "0 7 * * *"; // Setiap hari pukul 07:00 WIB
-const TIMEZONE = "Asia/Jakarta";
+const DEFAULT_SCHEDULE = '0 7 * * *'; // Setiap hari pukul 07:00 WIB
+const TIMEZONE = 'Asia/Jakarta';
 
 export const initSchedulers = async (): Promise<void> => {
   try {
@@ -39,8 +39,8 @@ export const initSchedulers = async (): Promise<void> => {
       },
     );
 
-    logger.info("[Scheduler] Schedulers initialized successfully.");
+    logger.info('[Scheduler] Schedulers initialized successfully.');
   } catch (error) {
-    logger.error("[Scheduler] Failed to initialize schedulers:", error);
+    logger.error('[Scheduler] Failed to initialize schedulers:', error);
   }
 };

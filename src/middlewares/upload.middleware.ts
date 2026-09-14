@@ -1,4 +1,4 @@
-import multer from "multer";
+import multer from 'multer';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 

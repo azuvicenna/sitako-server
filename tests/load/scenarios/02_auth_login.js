@@ -8,9 +8,9 @@ export const options = {
   // untuk mengetahui batas throughput worker threadpool Node.js.
   stages: [
     { duration: '30s', target: 10 }, // Pemanasan 10 user login bersamaan
-    { duration: '1m', target: 30 },  // Beban sedang: 30 user login
-    { duration: '1m', target: 50 },  // Beban tinggi: 50 user login bersamaan
-    { duration: '30s', target: 0 },  // Ramp down
+    { duration: '1m', target: 30 }, // Beban sedang: 30 user login
+    { duration: '1m', target: 50 }, // Beban tinggi: 50 user login bersamaan
+    { duration: '30s', target: 0 }, // Ramp down
   ],
   thresholds: {
     // Bcrypt membutuhkan waktu komputasi (50-200ms per request),

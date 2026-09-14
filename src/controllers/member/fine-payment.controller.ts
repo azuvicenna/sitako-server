@@ -1,18 +1,13 @@
-import { Request, Response } from "express";
-import * as finePaymentService from "@/services/member/fine-payment.service";
-import { resolveParam } from "@/utils/core/param";
-import {
-  getPaginationParams,
-  sendError,
-  sendFail,
-  sendSuccess,
-} from "@/utils/core/handler";
+import { Request, Response } from 'express';
+import * as finePaymentService from '@/services/member/fine-payment.service';
+import { resolveParam } from '@/utils/core/param';
+import { getPaginationParams, sendError, sendFail, sendSuccess } from '@/utils/core/handler';
 
 export const getFinePaymentsHandler = async (req: Request, res: Response) => {
   try {
     const memberId = req.user?.id;
     if (!memberId) {
-      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+      return sendFail(res, 401, 'Pengguna tidak terautentikasi');
     }
 
     const { page, limit, search } = getPaginationParams(req.query);
@@ -25,7 +20,7 @@ export const getFinePaymentsHandler = async (req: Request, res: Response) => {
 
     return sendSuccess(res, result);
   } catch (error) {
-    return sendError(res, error, "getFinePaymentsHandler");
+    return sendError(res, error, 'getFinePaymentsHandler');
   }
 };
 
@@ -33,26 +28,23 @@ export const showFinePayment = async (req: Request, res: Response) => {
   try {
     const paymentId = resolveParam(req.params.id);
     if (!paymentId) {
-      return sendFail(res, 400, "ID pembayaran denda tidak valid");
+      return sendFail(res, 400, 'ID pembayaran denda tidak valid');
     }
 
     const memberId = req.user?.id;
     if (!memberId) {
-      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+      return sendFail(res, 401, 'Pengguna tidak terautentikasi');
     }
 
-    const result = await finePaymentService.getFinePaymentById(
-      paymentId,
-      memberId,
-    );
+    const result = await finePaymentService.getFinePaymentById(paymentId, memberId);
 
     if (!result) {
-      return sendFail(res, 404, "Data pembayaran denda tidak ditemukan");
+      return sendFail(res, 404, 'Data pembayaran denda tidak ditemukan');
     }
 
     return sendSuccess(res, result);
   } catch (error) {
-    return sendError(res, error, "showFinePayment");
+    return sendError(res, error, 'showFinePayment');
   }
 };
 
@@ -60,7 +52,7 @@ export const initiatePayment = async (req: Request, res: Response) => {
   try {
     const memberId = req.user?.id;
     if (!memberId) {
-      return sendFail(res, 401, "Pengguna tidak terautentikasi");
+      return sendFail(res, 401, 'Pengguna tidak terautentikasi');
     }
 
     const { transaksiId: transactionId, paymentMethodCode } = req.body ?? {};
@@ -71,8 +63,8 @@ export const initiatePayment = async (req: Request, res: Response) => {
       paymentMethodCode,
     );
 
-    return sendSuccess(res, result, "Pembayaran berhasil diinisiasi");
+    return sendSuccess(res, result, 'Pembayaran berhasil diinisiasi');
   } catch (error) {
-    return sendError(res, error, "initiatePayment");
+    return sendError(res, error, 'initiatePayment');
   }
 };

@@ -1,10 +1,9 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer, { type Transporter } from 'nodemailer';
 
-import logger from "@/utils/core/logger";
+import logger from '@/utils/core/logger';
 
 export type SendEmailResult =
-  | { success: true; messageId: string }
-  | { success: false; error: unknown };
+  { success: true; messageId: string } | { success: false; error: unknown };
 
 const mailPort = Number(process.env.MAIL_PORT) || 465;
 
@@ -24,7 +23,7 @@ export const sendEmail = async (
   html: string,
 ): Promise<SendEmailResult> => {
   try {
-    const sender = process.env.MAIL_FROM || process.env.MAIL_USER || "";
+    const sender = process.env.MAIL_FROM || process.env.MAIL_USER || '';
 
     const info = await transporter.sendMail({
       from: `"SITAKO" <${sender}>`,
@@ -35,8 +34,7 @@ export const sendEmail = async (
 
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown Error";
+    const errorMessage = error instanceof Error ? error.message : 'Unknown Error';
 
     logger.error(`Error sending email to ${to}: ${errorMessage}`, { error });
 

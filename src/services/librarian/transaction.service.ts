@@ -5,19 +5,19 @@ import {
   removeTransactionById,
   findTransactionsWithPagination,
   type TransactionInsert,
-} from "@/repositories/librarian/transaction.repository";
-import { generateTransactionCode } from "@/utils/generators/transaction-code";
+} from '@/repositories/librarian/transaction.repository';
+import { generateTransactionCode } from '@/utils/generators/transaction-code';
 import type {
   CreateTransaction,
   UpdateTransaction,
-} from "@/validations/librarian/transaction.schema";
-import { db } from "@/db";
-import { members, books, transactions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+} from '@/validations/librarian/transaction.schema';
+import { db } from '@/db';
+import { members, books, transactions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import {
   notifyLoanStatusChange,
   formatIndonesianDate,
-} from "@/services/notification/email-notification.service";
+} from '@/services/notification/email-notification.service';
 
 export const getTransactionsWithPagination = async (
   status: string,
@@ -36,7 +36,7 @@ export const createNewTransaction = async (payload: CreateTransaction) => {
   const transactionData: TransactionInsert = {
     ...payload,
     kdTransaksi: generateTransactionCode(),
-    status: "Dipinjam",
+    status: 'Dipinjam',
   };
 
   const created = await insertTransaction(transactionData);
@@ -70,10 +70,7 @@ export const createNewTransaction = async (payload: CreateTransaction) => {
   return created;
 };
 
-export const updateExistingTransaction = async (
-  id: string,
-  payload: UpdateTransaction,
-) => {
+export const updateExistingTransaction = async (id: string, payload: UpdateTransaction) => {
   const existingTransaction = await findTransaction(id);
   if (!existingTransaction) return null;
 

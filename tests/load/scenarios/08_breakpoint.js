@@ -21,12 +21,8 @@ export const options = {
   thresholds: {
     // abortOnFail: true akan menghentikan tes seketika saat sistem menyerah,
     // sehingga Anda langsung mengetahui pada RPS dan VU berapa titik jenuhnya.
-    http_req_duration: [
-      { threshold: 'p(95)<5000', abortOnFail: true, delayAbortEval: '10s' },
-    ],
-    http_req_failed: [
-      { threshold: 'rate<0.20', abortOnFail: true, delayAbortEval: '10s' },
-    ],
+    http_req_duration: [{ threshold: 'p(95)<5000', abortOnFail: true, delayAbortEval: '10s' }],
+    http_req_failed: [{ threshold: 'rate<0.20', abortOnFail: true, delayAbortEval: '10s' }],
   },
 };
 
@@ -36,7 +32,9 @@ export const options = {
 export function setup() {
   const auth = loginAsMember();
   if (!auth.token) {
-    throw new Error('Gagal login di tahap setup breakpoint test. Pastikan server SITAKO berjalan dan kredensial valid.');
+    throw new Error(
+      'Gagal login di tahap setup breakpoint test. Pastikan server SITAKO berjalan dan kredensial valid.',
+    );
   }
   return { token: auth.token };
 }
@@ -50,7 +48,7 @@ export default function (data) {
   // 1. Browse Books
   const booksRes = http.get(
     `${config.BASE_URL}/books?bookType=${bookType}&page=${randomPage}&limit=10`,
-    headers
+    headers,
   );
   check(booksRes, {
     'GET books status 200': (r) => r.status === 200,

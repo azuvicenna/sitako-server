@@ -1,4 +1,4 @@
-import { renderBaseEmailLayout } from "./base.template";
+import { renderBaseEmailLayout } from './base.template';
 
 export interface FineInvoiceEmailData {
   namaAnggota: string;
@@ -13,7 +13,9 @@ export interface FineInvoiceEmailData {
   appUrl?: string;
 }
 
-export const renderFineInvoiceEmail = (data: FineInvoiceEmailData): {
+export const renderFineInvoiceEmail = (
+  data: FineInvoiceEmailData,
+): {
   subject: string;
   html: string;
 } => {
@@ -27,17 +29,17 @@ export const renderFineInvoiceEmail = (data: FineInvoiceEmailData): {
     checkoutUrl,
     paymentMethodCode,
     tripayReference,
-    appUrl = process.env.APP_URL || "http://localhost:3000",
+    appUrl = process.env.APP_URL || 'http://localhost:3000',
   } = data;
 
-  const formattedTotal = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  const formattedTotal = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(totalDenda);
 
   const subject = `[Tagihan Denda] Pembayaran Denda Perpustakaan: ${formattedTotal}`;
-  const isOnline = metodePembayaran === "Non-Tunai" && Boolean(checkoutUrl);
+  const isOnline = metodePembayaran === 'Non-Tunai' && Boolean(checkoutUrl);
 
   const contentHtml = `
     <div style="margin-bottom: 20px;">
@@ -64,7 +66,7 @@ export const renderFineInvoiceEmail = (data: FineInvoiceEmailData): {
       </tr>
       <tr>
         <td class="label">Metode Pembayaran</td>
-        <td class="value">${metodePembayaran} ${paymentMethodCode ? `(${paymentMethodCode})` : ""}</td>
+        <td class="value">${metodePembayaran} ${paymentMethodCode ? `(${paymentMethodCode})` : ''}</td>
       </tr>
       ${
         tripayReference
@@ -72,7 +74,7 @@ export const renderFineInvoiceEmail = (data: FineInvoiceEmailData): {
               <td class="label">Ref Pembayaran</td>
               <td class="value"><code>${tripayReference}</code></td>
             </tr>`
-          : ""
+          : ''
       }
       <tr>
         <td class="label">Total Tagihan</td>

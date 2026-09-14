@@ -1,10 +1,10 @@
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { books, members, transactions } from "@/db/schema";
-import { withCache, withCacheAndPagination } from "@/utils/data/repository";
-import { clearCacheByPattern } from "@/utils/core/cache";
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import { books, members, transactions } from '@/db/schema';
+import { withCache, withCacheAndPagination } from '@/utils/data/repository';
+import { clearCacheByPattern } from '@/utils/core/cache';
 
-type TransactionStatus = (typeof transactions.$inferSelect)["status"];
+type TransactionStatus = (typeof transactions.$inferSelect)['status'];
 
 const getTodayRange = () => {
   const start = new Date();
@@ -18,15 +18,15 @@ const getTodayRange = () => {
 
 export const invalidateDashboardCache = async () => {
   await clearCacheByPattern([
-    "dashboard:summary",
-    "dashboard:trx:summary",
-    "dashboard:trx:table:*",
-    "dashboard:statistics:weekly",
+    'dashboard:summary',
+    'dashboard:trx:summary',
+    'dashboard:trx:table:*',
+    'dashboard:statistics:weekly',
   ]);
 };
 
 export const getDashboardSummaryRepo = async () => {
-  return withCache("dashboard:summary", 300, async () => {
+  return withCache('dashboard:summary', 300, async () => {
     const [[booksCount], [membersCount], [trxCount]] = await Promise.all([
       db
         .select({
@@ -44,7 +44,7 @@ export const getDashboardSummaryRepo = async () => {
           jatuhTempo: sql<number>`count(case when ${transactions.status} = 'Terlambat' then 1 end)::int`,
         })
         .from(transactions)
-        .where(inArray(transactions.status, ["Dipinjam", "Terlambat"])),
+        .where(inArray(transactions.status, ['Dipinjam', 'Terlambat'])),
     ]);
 
     return {
@@ -56,53 +56,34 @@ export const getDashboardSummaryRepo = async () => {
   });
 };
 
-export const getTodayTransactionsRepo = async (
-  page: number,
-  limit: number,
-  status: string,
-) => {
-  const statusKey = status.replace(/\s+/g, "");
+export const getTodayTransactionsRepo = async (page: number, limit: number, status: string) => {
+  const statusKey = status.replace(/\s+/g, '');
   const cacheKey = `dashboard:trx:table:${statusKey}:${page}:${limit}`;
 
-  return withCacheAndPagination(
-    cacheKey,
-    page,
-    limit,
-    async (offset, limit) => {
-      const { start, end } = getTodayRange();
-      const baseConditions = [
-        gte(transactions.createdAt, start),
-        lte(transactions.createdAt, end),
-      ];
+  return withCacheAndPagination(cacheKey, page, limit, async (offset, limit) => {
+    const { start, end } = getTodayRange();
+    const baseConditions = [gte(transactions.createdAt, start), lte(transactions.createdAt, end)];
 
-      if (status && status !== "Semua") {
-        baseConditions.push(
-          eq(transactions.status, status as TransactionStatus),
-        );
-      }
+    if (status && status !== 'Semua') {
+      baseConditions.push(eq(transactions.status, status as TransactionStatus));
+    }
 
-      const whereClause = and(...baseConditions);
+    const whereClause = and(...baseConditions);
 
-      const [data, [totalFiltered]] = await Promise.all([
-        db
-          .select()
-          .from(transactions)
-          .where(whereClause)
-          .limit(limit)
-          .offset(offset),
-        db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(transactions)
-          .where(whereClause),
-      ]);
+    const [data, [totalFiltered]] = await Promise.all([
+      db.select().from(transactions).where(whereClause).limit(limit).offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(transactions)
+        .where(whereClause),
+    ]);
 
-      return { data, total: totalFiltered?.count ?? 0 };
-    },
-  );
+    return { data, total: totalFiltered?.count ?? 0 };
+  });
 };
 
 export const getTodaySummaryRepo = async () => {
-  return withCache("dashboard:trx:summary", 60, async () => {
+  return withCache('dashboard:trx:summary', 60, async () => {
     const { start, end } = getTodayRange();
 
     const [summaryCounts] = await db
@@ -117,19 +98,14 @@ export const getTodaySummaryRepo = async () => {
         tidakMengembalikan: sql<number>`count(case when ${transactions.status} = 'Tidak Mengembalikan' then 1 end)::int`,
       })
       .from(transactions)
-      .where(
-        and(
-          gte(transactions.createdAt, start),
-          lte(transactions.createdAt, end),
-        ),
-      );
+      .where(and(gte(transactions.createdAt, start), lte(transactions.createdAt, end)));
 
     return summaryCounts;
   });
 };
 
 export const getWeeklyStatisticsRepo = async () => {
-  return withCache("dashboard:statistics:weekly", 300, async () => {
+  return withCache('dashboard:statistics:weekly', 300, async () => {
     const endDate = new Date();
     endDate.setHours(23, 59, 59, 999);
 
@@ -142,11 +118,6 @@ export const getWeeklyStatisticsRepo = async () => {
         createdAt: transactions.createdAt,
       })
       .from(transactions)
-      .where(
-        and(
-          gte(transactions.createdAt, startDate),
-          lte(transactions.createdAt, endDate),
-        ),
-      );
+      .where(and(gte(transactions.createdAt, startDate), lte(transactions.createdAt, endDate)));
   });
 };

@@ -1,15 +1,9 @@
-import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { books, finePayments, members, transactions } from "@/db/schema";
-import type {
-  CirculationRow,
-  DateRangeFilter,
-  FineRow,
-} from "@/types/report.types";
+import { and, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import { books, finePayments, members, transactions } from '@/db/schema';
+import type { CirculationRow, DateRangeFilter, FineRow } from '@/types/report.types';
 
-export const getCirculationReport = async (
-  filter: DateRangeFilter,
-): Promise<CirculationRow[]> => {
+export const getCirculationReport = async (filter: DateRangeFilter): Promise<CirculationRow[]> => {
   const conditions = [];
 
   if (filter.startDate) {
@@ -37,9 +31,7 @@ export const getCirculationReport = async (
     .orderBy(desc(transactions.tglPinjam));
 };
 
-export const getFineReport = async (
-  filter: DateRangeFilter,
-): Promise<FineRow[]> => {
+export const getFineReport = async (filter: DateRangeFilter): Promise<FineRow[]> => {
   const conditions = [];
 
   if (filter.startDate) {

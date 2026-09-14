@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from 'xlsx';
 
 export type ExcelColumn<T> = {
   header: string;
@@ -14,7 +14,7 @@ export function generateExcelBuffer<T>(
   const rows = data.map((item) =>
     columns.map((c) => {
       const val = item[c.key];
-      return val !== null && val !== undefined ? val : "";
+      return val !== null && val !== undefined ? val : '';
     }),
   );
 
@@ -27,10 +27,10 @@ export function generateExcelBuffer<T>(
     }
   });
 
-  worksheet["!cols"] = columns.map((col, colIdx) => {
+  worksheet['!cols'] = columns.map((col, colIdx) => {
     let maxLen = col.header.length;
     for (const row of rows) {
-      const cellVal = String(row[colIdx] ?? "");
+      const cellVal = String(row[colIdx] ?? '');
       if (cellVal.length > maxLen) {
         maxLen = cellVal.length;
       }
@@ -41,23 +41,20 @@ export function generateExcelBuffer<T>(
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
-  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
-export function generateCsvBuffer<T>(
-  data: T[],
-  columns: ExcelColumn<T>[],
-): Buffer {
+export function generateCsvBuffer<T>(data: T[], columns: ExcelColumn<T>[]): Buffer {
   const headers = columns.map((c) => c.header);
   const rows = data.map((item) =>
     columns.map((c) => {
       const val = item[c.key];
-      return val !== null && val !== undefined ? val : "";
+      return val !== null && val !== undefined ? val : '';
     }),
   );
 
   const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const csvString = XLSX.utils.sheet_to_csv(worksheet);
 
-  return Buffer.from(csvString, "utf-8");
+  return Buffer.from(csvString, 'utf-8');
 }

@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
-import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
 import {
   insertMember,
   updateMemberById,
@@ -8,17 +8,14 @@ import {
   removeMemberById,
   findMembersWithPagination,
   type MemberInsert,
-} from "@/repositories/librarian/member.repository";
-import { deleteFile, uploadFile } from "@/utils/services/storage";
-import type {
-  CreateMember,
-  UpdateMember,
-} from "@/validations/librarian/member.schema";
-import logger from "@/utils/core/logger";
+} from '@/repositories/librarian/member.repository';
+import { deleteFile, uploadFile } from '@/utils/services/storage';
+import type { CreateMember, UpdateMember } from '@/validations/librarian/member.schema';
+import logger from '@/utils/core/logger';
 
-const extractFileKey = (url: string) => url.split("/").slice(-2).join("/");
+const extractFileKey = (url: string) => url.split('/').slice(-2).join('/');
 
-const safeDeleteFile = async (url?: string | null, label = "file") => {
+const safeDeleteFile = async (url?: string | null, label = 'file') => {
   if (!url) return;
   try {
     await deleteFile(extractFileKey(url));
@@ -28,11 +25,8 @@ const safeDeleteFile = async (url?: string | null, label = "file") => {
   }
 };
 
-const uploadWithUniqueName = async (
-  folder: string,
-  file: Express.Multer.File,
-) => {
-  const ext = file.originalname.split(".").pop();
+const uploadWithUniqueName = async (folder: string, file: Express.Multer.File) => {
+  const ext = file.originalname.split('.').pop();
   const filename = ext ? `${uuidv4()}.${ext}` : uuidv4();
   return uploadFile(folder, file, filename);
 };
@@ -50,15 +44,12 @@ export const getMemberById = async (id: string) => {
   return findMemberById(id);
 };
 
-export const createNewMember = async (
-  payload: CreateMember,
-  photoFile?: Express.Multer.File,
-) => {
-  let photoUrl = "";
+export const createNewMember = async (payload: CreateMember, photoFile?: Express.Multer.File) => {
+  let photoUrl = '';
 
   try {
     if (photoFile) {
-      photoUrl = await uploadWithUniqueName("profiles", photoFile);
+      photoUrl = await uploadWithUniqueName('profiles', photoFile);
     }
 
     const hashedPassword = await bcrypt.hash(payload.password, 10);
@@ -79,7 +70,7 @@ export const createNewMember = async (
     return memberWithoutPassword;
   } catch (error) {
     if (photoUrl) {
-      await safeDeleteFile(photoUrl, "orphaned profile photo");
+      await safeDeleteFile(photoUrl, 'orphaned profile photo');
     }
     throw error;
   }
@@ -102,7 +93,7 @@ export const updateExistingMember = async (
     }
 
     if (photoFile) {
-      newPhotoUrl = await uploadWithUniqueName("profiles", photoFile);
+      newPhotoUrl = await uploadWithUniqueName('profiles', photoFile);
       updateData.foto = newPhotoUrl;
     }
 
@@ -115,14 +106,14 @@ export const updateExistingMember = async (
     if (!updated) return null;
 
     if (photoFile && existingMember.foto) {
-      await safeDeleteFile(existingMember.foto, "old profile photo");
+      await safeDeleteFile(existingMember.foto, 'old profile photo');
     }
 
     const { password: _, ...memberWithoutPassword } = updated;
     return memberWithoutPassword;
   } catch (error) {
     if (newPhotoUrl) {
-      await safeDeleteFile(newPhotoUrl, "orphaned profile photo");
+      await safeDeleteFile(newPhotoUrl, 'orphaned profile photo');
     }
     throw error;
   }
@@ -135,7 +126,7 @@ export const deleteExistingMember = async (id: string) => {
   const deleted = await removeMemberById(id);
 
   if (deleted && member.foto) {
-    await safeDeleteFile(member.foto, "profile photo on delete");
+    await safeDeleteFile(member.foto, 'profile photo on delete');
   }
 
   return deleted;

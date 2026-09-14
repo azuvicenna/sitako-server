@@ -1,4 +1,4 @@
-import { renderBaseEmailLayout } from "./base.template";
+import { renderBaseEmailLayout } from './base.template';
 
 export interface FineSuccessEmailData {
   namaAnggota: string;
@@ -11,7 +11,9 @@ export interface FineSuccessEmailData {
   appUrl?: string;
 }
 
-export const renderFineSuccessEmail = (data: FineSuccessEmailData): {
+export const renderFineSuccessEmail = (
+  data: FineSuccessEmailData,
+): {
   subject: string;
   html: string;
 } => {
@@ -23,12 +25,12 @@ export const renderFineSuccessEmail = (data: FineSuccessEmailData): {
     metodePembayaran,
     tglBayar,
     tripayReference,
-    appUrl = process.env.APP_URL || "http://localhost:3000",
+    appUrl = process.env.APP_URL || 'http://localhost:3000',
   } = data;
 
-  const formattedTotal = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  const formattedTotal = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(totalDenda);
 
@@ -71,7 +73,7 @@ export const renderFineSuccessEmail = (data: FineSuccessEmailData): {
               <td class="label">Ref Tripay</td>
               <td class="value"><code>${tripayReference}</code></td>
             </tr>`
-          : ""
+          : ''
       }
       <tr>
         <td class="label">Total Dibayar</td>

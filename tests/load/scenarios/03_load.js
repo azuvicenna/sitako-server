@@ -8,11 +8,11 @@ export const options = {
   stages: [
     { duration: '1m', target: 50 }, // Ramp-up perlahan ke 50 user selama 1 menit
     { duration: '3m', target: 50 }, // Tahan di 50 user selama 3 menit
-    { duration: '1m', target: 0 },  // Ramp-down ke 0 user selama 1 menit
+    { duration: '1m', target: 0 }, // Ramp-down ke 0 user selama 1 menit
   ],
   thresholds: {
     http_req_duration: ['p(95)<500', 'p(99)<1500'], // 95% request < 500ms
-    http_req_failed: ['rate<0.05'],                 // Error rate ditoleransi maksimal 5%
+    http_req_failed: ['rate<0.05'], // Error rate ditoleransi maksimal 5%
   },
 };
 
@@ -22,7 +22,9 @@ export const options = {
 export function setup() {
   const auth = loginAsMember();
   if (!auth.token) {
-    throw new Error('Gagal login di tahap setup load test. Pastikan server SITAKO berjalan dan kredensial valid.');
+    throw new Error(
+      'Gagal login di tahap setup load test. Pastikan server SITAKO berjalan dan kredensial valid.',
+    );
   }
   return { token: auth.token };
 }
@@ -37,7 +39,7 @@ export default function (data) {
   // 1. Browse Books dengan variasi tipe dan halaman
   const booksRes = http.get(
     `${config.BASE_URL}/books?bookType=${bookType}&page=${randomPage}&limit=10`,
-    headers
+    headers,
   );
   check(booksRes, {
     'GET books status 200': (r) => r.status === 200,
@@ -58,4 +60,3 @@ export default function (data) {
   // Simulasi think time pengguna (0.5s - 1.5s)
   sleep(Math.random() + 0.5);
 }
-

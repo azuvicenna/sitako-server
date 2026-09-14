@@ -9,8 +9,8 @@ export const options = {
   // Tanpa menyentuh Cloudflare R2 dan tanpa menembak Tripay eksternal.
   stages: [
     { duration: '30s', target: 10 }, // Ramp-up ke 10 VU
-    { duration: '1m', target: 20 },  // Beban konstan 20 VU (menghasilkan ribuan write operations)
-    { duration: '30s', target: 0 },  // Ramp-down
+    { duration: '1m', target: 20 }, // Beban konstan 20 VU (menghasilkan ribuan write operations)
+    { duration: '30s', target: 0 }, // Ramp-down
   ],
   thresholds: {
     // Operasi penulisan (INSERT/UPDATE/DELETE) melibatkan ACID transaction PostgreSQL,

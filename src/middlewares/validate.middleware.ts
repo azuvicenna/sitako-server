@@ -1,15 +1,15 @@
-import { NextFunction, Request, Response } from "express";
-import { ZodError, z } from "zod";
-import { sendError } from "@/utils/core/handler";
+import { NextFunction, Request, Response } from 'express';
+import { ZodError, z } from 'zod';
+import { sendError } from '@/utils/core/handler';
 
-type Source = "body" | "query" | "params";
+type Source = 'body' | 'query' | 'params';
 
-export const validate = (schema: z.ZodType, source: Source = "body") => {
+export const validate = (schema: z.ZodType, source: Source = 'body') => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = await schema.parseAsync(req[source]);
 
-      if (source === "query" || source === "params") {
+      if (source === 'query' || source === 'params') {
         Object.defineProperty(req, source, {
           value: parsed,
           writable: true,
@@ -24,15 +24,15 @@ export const validate = (schema: z.ZodType, source: Source = "body") => {
       if (error instanceof ZodError) {
         return res.status(400).json({
           success: false,
-          message: "Validasi gagal",
+          message: 'Validasi gagal',
           errors: error.issues.map((err) => ({
-            field: err.path.join(".") || "root",
+            field: err.path.join('.') || 'root',
             message: err.message,
           })),
         });
       }
 
-      return sendError(res, error, "validate");
+      return sendError(res, error, 'validate');
     }
   };
 };

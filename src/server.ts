@@ -1,19 +1,17 @@
-import app from "@/app";
-import { connectRedis } from "@/config/redis";
-import logger from "@/utils/core/logger";
-import { initSchedulers } from "@/jobs";
+import app from '@/app';
+import { connectRedis } from '@/config/redis';
+import logger from '@/utils/core/logger';
+import { initSchedulers } from '@/jobs';
 
 const PORT: number = Number(process.env.PORT) || 8080;
 
 const startServer = async (): Promise<void> => {
   try {
     await connectRedis();
-    logger.info("Connected to Redis successfully");
+    logger.info('Connected to Redis successfully');
   } catch (error) {
     logger.error(
-      `Failed to connect to Redis: ${
-        error instanceof Error ? error.message : "Unknown Error"
-      }`,
+      `Failed to connect to Redis: ${error instanceof Error ? error.message : 'Unknown Error'}`,
     );
   }
 

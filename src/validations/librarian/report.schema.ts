@@ -1,16 +1,16 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const reportQuerySchema = z
   .object({
     startDate: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD")
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD')
       .optional(),
     endDate: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD")
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD')
       .optional(),
-    format: z.enum(["json", "csv", "xlsx", "pdf"]).default("json"),
+    format: z.enum(['json', 'csv', 'xlsx', 'pdf']).default('json'),
   })
   .refine(
     (data) => {
@@ -20,8 +20,8 @@ export const reportQuerySchema = z
       return true;
     },
     {
-      message: "startDate tidak boleh lebih besar dari endDate",
-      path: ["startDate"],
+      message: 'startDate tidak boleh lebih besar dari endDate',
+      path: ['startDate'],
     },
   );
 

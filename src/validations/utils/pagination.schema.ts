@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const paginationSchema = z
   .object({
@@ -16,7 +16,7 @@ export const paginationSchema = z
         const num = Number(val);
         return Number.isInteger(num) && num > 0 ? Math.min(100, num) : 10;
       }),
-    search: z.string().trim().default(""),
+    search: z.string().trim().default(''),
   })
   .passthrough();
 

@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express";
-import client from "prom-client";
+import { Request, Response, NextFunction } from 'express';
+import client from 'prom-client';
 
 // 1. Registry: Wadah utama untuk menampung semua metrik
 export const register = new client.Registry();
@@ -10,18 +10,18 @@ client.collectDefaultMetrics({ register });
 // 2. Histogram: Mengukur seberapa cepat/lambat request selesai diproses (latensi)
 // Bucket membagi durasi ke beberapa kelompok waktu dalam satuan detik (misal: 50ms, 100ms, dst)
 const httpRequestDuration = new client.Histogram({
-  name: "http_request_duration_seconds",
-  help: "Durasi pemrosesan HTTP request dalam detik",
-  labelNames: ["method", "route", "status_code"],
+  name: 'http_request_duration_seconds',
+  help: 'Durasi pemrosesan HTTP request dalam detik',
+  labelNames: ['method', 'route', 'status_code'],
   buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5],
   registers: [register], // Langsung didaftarkan ke registry di sini
 });
 
 // 3. Counter: Nilai yang hanya bisa bertambah terus (menghitung total volume request)
 const httpRequestTotal = new client.Counter({
-  name: "http_requests_total",
-  help: "Total request HTTP yang masuk",
-  labelNames: ["method", "route", "status_code"],
+  name: 'http_requests_total',
+  help: 'Total request HTTP yang masuk',
+  labelNames: ['method', 'route', 'status_code'],
   registers: [register],
 });
 
@@ -32,22 +32,18 @@ const httpRequestTotal = new client.Counter({
  */
 function resolveRoute(req: Request): string {
   if (req.route?.path) {
-    return `${req.baseUrl || ""}${req.route.path}`;
+    return `${req.baseUrl || ''}${req.route.path}`;
   }
-  return "unmatched_route";
+  return 'unmatched_route';
 }
 
 // 4. Middleware: Dipasang paling atas aplikasi untuk memantau request yang masuk
-export function metricsMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function metricsMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Nyalakan timer stopwatch sebelum request masuk ke controller
   const stopTimer = httpRequestDuration.startTimer();
 
   // Tunggu sampai response benar-benar selesai dikirim ke client
-  res.on("finish", () => {
+  res.on('finish', () => {
     const labels = {
       method: req.method,
       route: resolveRoute(req),
@@ -65,12 +61,9 @@ export function metricsMiddleware(
 }
 
 // 5. Handler: Endpoint GET /metrics yang akan dibaca (di-scrape) berkala oleh Prometheus
-export async function metricsHandler(
-  _req: Request,
-  res: Response,
-): Promise<void> {
+export async function metricsHandler(_req: Request, res: Response): Promise<void> {
   try {
-    res.set("Content-Type", register.contentType);
+    res.set('Content-Type', register.contentType);
     res.end(await register.metrics());
   } catch (err) {
     res.status(500).end();

@@ -40,7 +40,7 @@ export function login(identifier, password) {
     headers: {
       'Content-Type': 'application/json',
       // Mengirimkan cookie captcha yang sudah di-hash HMAC-SHA256 sesuai verifikasi backend
-      'Cookie': `captcha_token=${hashedCaptcha}`,
+      Cookie: `captcha_token=${hashedCaptcha}`,
     },
   };
 
@@ -48,7 +48,8 @@ export function login(identifier, password) {
 
   const isSuccess = check(res, {
     'login berhasil (status 200)': (r) => r.status === 200,
-    'mendapatkan cookie token': (r) => r.cookies && r.cookies.token !== undefined && r.cookies.token.length > 0,
+    'mendapatkan cookie token': (r) =>
+      r.cookies && r.cookies.token !== undefined && r.cookies.token.length > 0,
   });
 
   const token = extractToken(res);
@@ -83,8 +84,7 @@ export function authHeaders(token) {
   return {
     headers: {
       'Content-Type': 'application/json',
-      'Cookie': `token=${token}`,
+      Cookie: `token=${token}`,
     },
   };
 }
-

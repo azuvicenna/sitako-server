@@ -5,18 +5,18 @@ import {
   removeFinePaymentById,
   findFinePaymentsWithPagination,
   type FinePaymentInsert,
-} from "@/repositories/librarian/fine-payment.repository";
+} from '@/repositories/librarian/fine-payment.repository';
 import type {
   CreateFinePayment,
   UpdateFinePayment,
-} from "@/validations/librarian/fine-payment.schema";
-import { db } from "@/db";
-import { members, books, transactions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+} from '@/validations/librarian/fine-payment.schema';
+import { db } from '@/db';
+import { members, books, transactions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import {
   notifyFinePaymentSuccess,
   formatIndonesianDate,
-} from "@/services/notification/email-notification.service";
+} from '@/services/notification/email-notification.service';
 
 export const getFinePaymentsWithPagination = async (
   page: number,
@@ -33,7 +33,7 @@ export const getFinePaymentById = async (id: string) => {
 export const createNewFinePayment = async (payload: CreateFinePayment) => {
   const paymentData: FinePaymentInsert = {
     ...payload,
-    paymentStatus: "PAID",
+    paymentStatus: 'PAID',
     tglBayar: payload.tglBayar ?? new Date(),
   };
 
@@ -70,10 +70,7 @@ export const createNewFinePayment = async (payload: CreateFinePayment) => {
   return created;
 };
 
-export const updateExistingFinePayment = async (
-  id: string,
-  payload: UpdateFinePayment,
-) => {
+export const updateExistingFinePayment = async (id: string, payload: UpdateFinePayment) => {
   const existingPayment = await findFinePayment(id);
   if (!existingPayment) return null;
 
@@ -84,11 +81,7 @@ export const updateExistingFinePayment = async (
   const updateData: Partial<FinePaymentInsert> = { ...payload };
   const updated = await updateFinePaymentById(id, updateData);
 
-  if (
-    updated &&
-    payload.paymentStatus === "PAID" &&
-    existingPayment.paymentStatus !== "PAID"
-  ) {
+  if (updated && payload.paymentStatus === 'PAID' && existingPayment.paymentStatus !== 'PAID') {
     const [memberAndBook] = await db
       .select({
         email: members.email,

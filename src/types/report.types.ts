@@ -21,4 +21,4 @@ export type FineRow = {
   tglBayar: Date | null;
 };
 
-export type ReportFormat = "json" | "csv" | "xlsx" | "pdf";
+export type ReportFormat = 'json' | 'csv' | 'xlsx' | 'pdf';

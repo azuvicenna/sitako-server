@@ -1,23 +1,20 @@
-import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
-import { R2_BUCKET, s3Client } from "@/config/r2";
+import { R2_BUCKET, s3Client } from '@/config/r2';
 
 export interface UploadFileInput {
   buffer: Buffer;
   mimetype: string;
 }
 
-const PUBLIC_STORAGE_URL = (process.env.PUBLIC_STORAGE_URL || "").replace(
-  /\/$/,
-  "",
-);
+const PUBLIC_STORAGE_URL = (process.env.PUBLIC_STORAGE_URL || '').replace(/\/$/, '');
 
 export async function uploadFile(
   folderName: string,
   file: UploadFileInput,
   fileName: string,
 ): Promise<string> {
-  const sanitizedFolder = folderName.replace(/^\/+|\/+$/g, "");
+  const sanitizedFolder = folderName.replace(/^\/+|\/+$/g, '');
   const fileKey = sanitizedFolder ? `${sanitizedFolder}/${fileName}` : fileName;
 
   const command = new PutObjectCommand({

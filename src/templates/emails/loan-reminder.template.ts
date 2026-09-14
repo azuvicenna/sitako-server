@@ -1,6 +1,6 @@
-import { renderBaseEmailLayout } from "./base.template";
+import { renderBaseEmailLayout } from './base.template';
 
-export type LoanReminderType = "H-2" | "H-1" | "Hari-H" | "H+1" | "Berkala";
+export type LoanReminderType = 'H-2' | 'H-1' | 'Hari-H' | 'H+1' | 'Berkala';
 
 export interface LoanReminderEmailData {
   namaAnggota: string;
@@ -13,7 +13,9 @@ export interface LoanReminderEmailData {
   appUrl?: string;
 }
 
-export const renderLoanReminderEmail = (data: LoanReminderEmailData): {
+export const renderLoanReminderEmail = (
+  data: LoanReminderEmailData,
+): {
   subject: string;
   html: string;
 } => {
@@ -25,44 +27,47 @@ export const renderLoanReminderEmail = (data: LoanReminderEmailData): {
     tglKembali,
     tipeReminder,
     hariTerlambat = 0,
-    appUrl = process.env.APP_URL || "http://localhost:3000",
+    appUrl = process.env.APP_URL || 'http://localhost:3000',
   } = data;
 
-  let subject = "";
-  let badgeHtml = "";
-  let headline = "";
-  let message = "";
+  let subject = '';
+  let badgeHtml = '';
+  let headline = '';
+  let message = '';
 
   switch (tipeReminder) {
-    case "H-2":
+    case 'H-2':
       subject = `[Pengingat] 2 Hari Lagi Batas Pengembalian Buku: ${judulBuku}`;
       badgeHtml = `<span class="badge badge-info">Pengingat H-2</span>`;
-      headline = "Batas Waktu Pengembalian 2 Hari Lagi";
-      message = "Halo, kami ingin mengingatkan bahwa waktu peminjaman buku Anda tersisa 2 hari lagi. Mohon persiapkan buku untuk dikembalikan tepat waktu.";
+      headline = 'Batas Waktu Pengembalian 2 Hari Lagi';
+      message =
+        'Halo, kami ingin mengingatkan bahwa waktu peminjaman buku Anda tersisa 2 hari lagi. Mohon persiapkan buku untuk dikembalikan tepat waktu.';
       break;
 
-    case "H-1":
+    case 'H-1':
       subject = `[Pengingat Penting] Besok Batas Pengembalian Buku: ${judulBuku}`;
       badgeHtml = `<span class="badge badge-warning">Pengingat H-1</span>`;
-      headline = "Batas Waktu Pengembalian Besok";
-      message = "Halo, besok adalah batas akhir masa peminjaman buku Anda. Harap mengembalikan buku ke perpustakaan sebelum jam operasional berakhir agar terhindar dari denda.";
+      headline = 'Batas Waktu Pengembalian Besok';
+      message =
+        'Halo, besok adalah batas akhir masa peminjaman buku Anda. Harap mengembalikan buku ke perpustakaan sebelum jam operasional berakhir agar terhindar dari denda.';
       break;
 
-    case "Hari-H":
+    case 'Hari-H':
       subject = `[Hari Ini] Batas Akhir Pengembalian Buku: ${judulBuku}`;
       badgeHtml = `<span class="badge badge-warning">Hari Ini Jatuh Tempo</span>`;
-      headline = "Hari Ini Batas Akhir Pengembalian";
-      message = "Halo, hari ini adalah batas akhir pengembalian buku pinjaman Anda. Segera serahkan buku ke loket perpustakaan sebelum pukul 16:00 WIB untuk menghindari perhitungan denda keterlambatan.";
+      headline = 'Hari Ini Batas Akhir Pengembalian';
+      message =
+        'Halo, hari ini adalah batas akhir pengembalian buku pinjaman Anda. Segera serahkan buku ke loket perpustakaan sebelum pukul 16:00 WIB untuk menghindari perhitungan denda keterlambatan.';
       break;
 
-    case "H+1":
+    case 'H+1':
       subject = `[PENTING] Keterlambatan Pengembalian Buku: ${judulBuku}`;
       badgeHtml = `<span class="badge badge-danger">Terlambat 1 Hari</span>`;
-      headline = "Peminjaman Telah Melewati Batas Waktu";
+      headline = 'Peminjaman Telah Melewati Batas Waktu';
       message = `Halo, masa peminjaman buku Anda telah jatuh tempo kemarin dan belum tercatat dikembalikan. Status transaksi kini telah diperbarui menjadi <strong>Terlambat</strong> dan denda harian mulai terhitung. Harap segera kembalikan buku ke perpustakaan.`;
       break;
 
-    case "Berkala":
+    case 'Berkala':
       subject = `[Peringatan Denda] Buku Belum Dikembalikan (${hariTerlambat} Hari Terlambat): ${judulBuku}`;
       badgeHtml = `<span class="badge badge-danger">Terlambat ${hariTerlambat} Hari</span>`;
       headline = `Peringatan Keterlambatan (${hariTerlambat} Hari)`;
@@ -93,7 +98,7 @@ export const renderLoanReminderEmail = (data: LoanReminderEmailData): {
       </tr>
       <tr>
         <td class="label">Batas Pengembalian</td>
-        <td class="value" style="color: ${tipeReminder === "H+1" || tipeReminder === "Berkala" ? "#dc2626" : "#2563eb"};">${tglKembali}</td>
+        <td class="value" style="color: ${tipeReminder === 'H+1' || tipeReminder === 'Berkala' ? '#dc2626' : '#2563eb'};">${tglKembali}</td>
       </tr>
       ${
         hariTerlambat > 0
@@ -101,7 +106,7 @@ export const renderLoanReminderEmail = (data: LoanReminderEmailData): {
               <td class="label">Keterlambatan</td>
               <td class="value" style="color: #dc2626;">${hariTerlambat} Hari</td>
             </tr>`
-          : ""
+          : ''
       }
     </table>
 

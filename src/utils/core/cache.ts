@@ -1,8 +1,6 @@
-import redisClient from "@/config/redis";
+import redisClient from '@/config/redis';
 
-export async function clearCacheByPattern(
-  pattern: string | string[],
-): Promise<void> {
+export async function clearCacheByPattern(pattern: string | string[]): Promise<void> {
   const rawPatterns = Array.isArray(pattern) ? pattern : [pattern];
   const patterns = Array.from(new Set(rawPatterns.filter(Boolean)));
 
@@ -14,7 +12,7 @@ export async function clearCacheByPattern(
 }
 
 async function clearSinglePattern(pattern: string): Promise<void> {
-  let cursor = "0";
+  let cursor = '0';
 
   do {
     const { cursor: nextCursor, keys } = await redisClient.scan(cursor, {
@@ -27,5 +25,5 @@ async function clearSinglePattern(pattern: string): Promise<void> {
     if (keys.length > 0) {
       await redisClient.del(keys);
     }
-  } while (cursor !== "0");
+  } while (cursor !== '0');
 }

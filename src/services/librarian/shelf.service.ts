@@ -5,17 +5,10 @@ import {
   removeShelfById,
   findShelvesWithPagination,
   type ShelfInsert,
-} from "@/repositories/librarian/shelf.repository";
-import type {
-  CreateShelf,
-  UpdateShelf,
-} from "@/validations/librarian/shelf.schema";
+} from '@/repositories/librarian/shelf.repository';
+import type { CreateShelf, UpdateShelf } from '@/validations/librarian/shelf.schema';
 
-export const getShelvesWithPagination = async (
-  page: number,
-  limit: number,
-  search: string,
-) => {
+export const getShelvesWithPagination = async (page: number, limit: number, search: string) => {
   return findShelvesWithPagination(page, limit, search);
 };
 

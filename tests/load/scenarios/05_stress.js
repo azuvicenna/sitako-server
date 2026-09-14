@@ -6,15 +6,15 @@ import { config } from '../k6.config.js';
 export const options = {
   // Stress test: Mendorong sistem melewati batas normal (sangat agresif)
   stages: [
-    { duration: '2m', target: 100 }, 
-    { duration: '2m', target: 200 }, 
+    { duration: '2m', target: 100 },
+    { duration: '2m', target: 200 },
     { duration: '2m', target: 300 }, // Mencapai 300 concurrent user
-    { duration: '2m', target: 0 },   // Ramp-down
+    { duration: '2m', target: 0 }, // Ramp-down
   ],
   thresholds: {
     // Thresholds SLA saat stress test: sistem mulai melambat tapi jangan sampai gagal massal
     http_req_duration: ['p(95)<2000', 'p(99)<3000'], // 95% request di bawah 2 detik
-    http_req_failed: ['rate<0.10'],                 // Error rate maksimal 10% yang ditoleransi
+    http_req_failed: ['rate<0.10'], // Error rate maksimal 10% yang ditoleransi
   },
 };
 
@@ -24,7 +24,9 @@ export const options = {
 export function setup() {
   const auth = loginAsMember();
   if (!auth.token) {
-    throw new Error('Gagal login di tahap setup stress test. Pastikan server SITAKO berjalan dan kredensial valid.');
+    throw new Error(
+      'Gagal login di tahap setup stress test. Pastikan server SITAKO berjalan dan kredensial valid.',
+    );
   }
   return { token: auth.token };
 }
@@ -39,7 +41,7 @@ export default function (data) {
   // 1. Browse Books
   const booksRes = http.get(
     `${config.BASE_URL}/books?bookType=${bookType}&page=${randomPage}&limit=10`,
-    headers
+    headers,
   );
   check(booksRes, {
     'GET books status 200': (r) => r.status === 200,
@@ -59,4 +61,3 @@ export default function (data) {
 
   sleep(1);
 }
-

@@ -1,10 +1,10 @@
-import { and, count, desc, eq, ilike, or } from "drizzle-orm";
-import { db } from "@/db";
-import { bookmarks, books } from "@/db/schema";
-import type { BookSelect } from "../librarian/book.repository";
-import { withCache } from "@/utils/data/repository";
-import { clearCacheByPattern } from "@/utils/core/cache";
-import { invalidateMemberDashboardCache } from "./dashboard.repository";
+import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { db } from '@/db';
+import { bookmarks, books } from '@/db/schema';
+import type { BookSelect } from '../librarian/book.repository';
+import { withCache } from '@/utils/data/repository';
+import { clearCacheByPattern } from '@/utils/core/cache';
+import { invalidateMemberDashboardCache } from './dashboard.repository';
 
 export type BookmarkInsert = typeof bookmarks.$inferInsert;
 export type BookmarkSelect = typeof bookmarks.$inferSelect;
@@ -14,7 +14,7 @@ export interface BookmarkBookDetail {
   judul: string;
   penulis: string;
   cover: string;
-  tipeBuku: "Fisik" | "Digital";
+  tipeBuku: 'Fisik' | 'Digital';
   genre: string[];
 }
 
@@ -45,7 +45,7 @@ export interface AvailableBookItem {
   penerbit: string;
   isbn: string;
   genre: string[];
-  tipeBuku: "Fisik" | "Digital";
+  tipeBuku: 'Fisik' | 'Digital';
   tahunTerbit: number;
   jumlahStok: number;
   cover: string;
@@ -58,17 +58,17 @@ export interface AvailableBooksPaginatedResult {
 }
 
 export const invalidateMemberBookCache = async () => {
-  await clearCacheByPattern("member:books:*");
+  await clearCacheByPattern('member:books:*');
 };
 
 export const findAvailableBooksWithPagination = async (
   page = 1,
   limit = 10,
-  search = "",
-  bookType?: "Fisik" | "Digital",
+  search = '',
+  bookType?: 'Fisik' | 'Digital',
 ): Promise<AvailableBooksPaginatedResult> => {
   const trimmedSearch = search.trim();
-  const cacheKey = `member:books:type:${bookType ?? "all"}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
+  const cacheKey = `member:books:type:${bookType ?? 'all'}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
 
   return withCache(cacheKey, 60, async () => {
     const safeLimit = Math.max(1, limit);
@@ -103,10 +103,7 @@ export const findAvailableBooksWithPagination = async (
         .orderBy(desc(books.createdAt))
         .limit(safeLimit)
         .offset(offset),
-      db
-        .select({ total: count() })
-        .from(books)
-        .where(whereClause),
+      db.select({ total: count() }).from(books).where(whereClause),
     ]);
 
     const totalItems = Number(countResult?.total ?? 0);
@@ -126,7 +123,7 @@ export const findAvailableBooksWithPagination = async (
         cover: book.cover,
       };
 
-      if (book.tipeBuku === "Digital" && book.file) {
+      if (book.tipeBuku === 'Digital' && book.file) {
         item.file = book.file;
       }
 
@@ -158,7 +155,7 @@ export const findBookmarksWithPagination = async (
   memberId: string,
   page = 1,
   limit = 10,
-  search = "",
+  search = '',
 ): Promise<BookmarkPaginatedResult> => {
   const trimmedSearch = search.trim();
   const cacheKey = `bookmark:anggota:${memberId}:search:${trimmedSearch}:page:${page}:limit:${limit}`;
@@ -172,12 +169,7 @@ export const findBookmarksWithPagination = async (
 
     if (trimmedSearch) {
       const searchPattern = `%${trimmedSearch}%`;
-      conditions.push(
-        or(
-          ilike(books.judul, searchPattern),
-          ilike(books.penulis, searchPattern),
-        )!,
-      );
+      conditions.push(or(ilike(books.judul, searchPattern), ilike(books.penulis, searchPattern))!);
     }
 
     const whereClause = and(...conditions);
@@ -238,18 +230,14 @@ export const findBookmarksWithPagination = async (
 };
 
 export const findBook = async (bookId: string): Promise<BookSelect | null> => {
-  const [book] = await db
-    .select()
-    .from(books)
-    .where(eq(books.id, bookId))
-    .limit(1);
+  const [book] = await db.select().from(books).where(eq(books.id, bookId)).limit(1);
 
   return book ?? null;
 };
 
 export const findDigitalBook = async (
   bookId: string,
-): Promise<Pick<BookSelect, "id" | "cover" | "file" | "createdAt"> | null> => {
+): Promise<Pick<BookSelect, 'id' | 'cover' | 'file' | 'createdAt'> | null> => {
   const [book] = await db
     .select({
       id: books.id,
@@ -258,15 +246,13 @@ export const findDigitalBook = async (
       createdAt: books.createdAt,
     })
     .from(books)
-    .where(and(eq(books.id, bookId), eq(books.tipeBuku, "Digital")))
+    .where(and(eq(books.id, bookId), eq(books.tipeBuku, 'Digital')))
     .limit(1);
 
   return book ?? null;
 };
 
-export const insertBookmark = async (
-  data: BookmarkInsert,
-): Promise<BookmarkSelect> => {
+export const insertBookmark = async (data: BookmarkInsert): Promise<BookmarkSelect> => {
   const [created] = await db.insert(bookmarks).values(data).returning();
 
   if (created) {
@@ -276,13 +262,8 @@ export const insertBookmark = async (
   return created;
 };
 
-export const removeBookmarkById = async (
-  bookmarkId: string,
-): Promise<BookmarkSelect | null> => {
-  const [deleted] = await db
-    .delete(bookmarks)
-    .where(eq(bookmarks.id, bookmarkId))
-    .returning();
+export const removeBookmarkById = async (bookmarkId: string): Promise<BookmarkSelect | null> => {
+  const [deleted] = await db.delete(bookmarks).where(eq(bookmarks.id, bookmarkId)).returning();
 
   if (deleted) {
     await invalidateMemberBookmarkCache(deleted.anggotaId);
