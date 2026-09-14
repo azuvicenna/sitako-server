@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# Role: docker
+# Task: Instalasi Docker CE dan Docker Compose Plugin resmi
+# =============================================================================
+
+- name: Hapus paket Docker legacy yang sudah usang jika ada
+  ansible.builtin.apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Buat direktori keyrings untuk apt
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Unduh GPG key resmi Docker
+  ansible.builtin.get_url:
+    url: "https://download.docker.com/linux/ubuntu/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+    force: false
+
+- name: Daftarkan repository resmi Docker ke APT sources
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+
+- name: Update apt cache setelah menambahkan repository Docker
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Docker CE, CLI, containerd, dan Docker Compose Plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Pastikan layanan Docker aktif dan berjalan otomatis saat boot
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Tambahkan user aplikasi ke grup docker
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    groups: docker
+    append: true
+
+- name: Verifikasi instalasi Docker Engine & Compose
+  ansible.builtin.command:
+    cmd: docker compose version
+  register: docker_compose_version_output
+  changed_when: false
+
+- name: Tampilkan versi Docker Compose yang terpasang
+  ansible.builtin.debug:
+    msg: "Versi terpasang: {{ docker_compose_version_output.stdout }}"

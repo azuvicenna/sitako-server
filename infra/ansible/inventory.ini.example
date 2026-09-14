@@ -1,0 +1,14 @@
+# =============================================================================
+# Contoh File Inventory Ansible untuk SITAKO Backend
+# Jika menggunakan Terraform, file `inventory.ini` akan otomatis digenerate.
+# Jika menggunakan server manual (VPS / VM lokal), salin file ini menjadi `inventory.ini`:
+#   cp inventory.ini.example inventory.ini
+# =============================================================================
+
+[sitako_servers]
+# Ganti dengan IP publik / privat server tujuan Anda
+sitako-node-01 ansible_host=103.xxx.xxx.xxx ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+[sitako_servers:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

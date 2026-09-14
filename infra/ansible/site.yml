@@ -1,0 +1,51 @@
+---
+# =============================================================================
+# Playbook Utama: SITAKO Backend Provisioning & Deployment
+#
+# Cara Menjalankan:
+#   ansible-playbook site.yml
+#
+# Hanya konfigurasi sistem:
+#   ansible-playbook site.yml --tags system
+#
+# Hanya instalasi Docker:
+#   ansible-playbook site.yml --tags docker
+#
+# Hanya deploy / update aplikasi:
+#   ansible-playbook site.yml --tags deploy
+# =============================================================================
+
+- name: Provisioning Server dan Deployment SITAKO Backend
+  hosts: sitako_servers
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verifikasi konektivitas dan sistem operasi target
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: "Playbook ini didesain untuk sistem operasi turunan Debian/Ubuntu (Ubuntu 22.04/24.04 LTS)."
+        success_msg: "Sistem operasi terdeteksi: {{ ansible_distribution }} {{ ansible_distribution_version }}."
+
+  roles:
+    - role: common
+      tags: ['common', 'system']
+
+    - role: docker
+      tags: ['docker']
+
+    - role: sitako
+      tags: ['sitako', 'deploy']
+
+  post_tasks:
+    - name: Menampilkan ringkasan status deployment
+      ansible.builtin.debug:
+        msg:
+          - "======================================================"
+          - "SITAKO Backend berhasil dideploy!"
+          - "Server Host      : {{ ansible_host }}"
+          - "Load Balancer URL: http://{{ ansible_host }}:{{ lb_port }}"
+          - "Prometheus UI    : http://{{ ansible_host }}:{{ prometheus_port }}"
+          - "Replica Count    : {{ replica_count }} replika"
+          - "======================================================"

@@ -1,0 +1,9 @@
+# File ini dibuat otomatis oleh Terraform.
+# Jangan mengedit langsung jika Anda mengelola infrastruktur via Terraform.
+
+[sitako_servers]
+sitako-node-01 ansible_host=${server_ip} ansible_user=${ssh_user}
+
+[sitako_servers:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

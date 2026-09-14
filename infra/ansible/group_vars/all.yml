@@ -1,0 +1,88 @@
+---
+# =============================================================================
+# Variabel Global Ansible untuk SITAKO Backend
+# Sesuaikan nilai variabel ini sebelum menjalankan playbook deployment.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Konfigurasi Server & User
+# -----------------------------------------------------------------------------
+app_user: "ubuntu"
+app_group: "ubuntu"
+app_dir: "/opt/sitako"
+swap_size_mb: 2048
+
+# Port yang dibuka pada firewall UFW
+firewall_allowed_ports:
+  - 22    # SSH
+  - 80    # Nginx Load Balancer (HTTP)
+  - 443   # HTTPS (opsional)
+  - 8080  # SITAKO App port direct
+  - 9091  # Prometheus Monitoring Dashboard
+
+# -----------------------------------------------------------------------------
+# Konfigurasi Deployment & Scaling
+# -----------------------------------------------------------------------------
+# Jumlah replika container aplikasi yang dijalankan di balik Nginx Load Balancer
+replica_count: 2
+
+# Jalankan migrasi database otomatis setelah container up
+run_migration: true
+
+# Jalankan seeder akun pustakawan default (hanya perlu saat pertama kali instalasi)
+run_seed: false
+
+# -----------------------------------------------------------------------------
+# Environment Variables Aplikasi SITAKO (.env)
+# -----------------------------------------------------------------------------
+app_name: "SITAKO-backend"
+app_env: "production"
+node_env: "production"
+app_port: 8080
+lb_port: 80
+app_url: "http://localhost:3000"
+allowed_origin: "http://localhost:3000"
+log_level: "info"
+cookie_secure: "false"
+
+# Database (PostgreSQL)
+postgres_host: "database"
+postgres_port: 5432
+postgres_user: "postgres"
+postgres_password: "password_sitako_secure_123"
+postgres_db: "mydb"
+database_url: ""
+
+# Cache (Redis)
+redis_host: "redis"
+redis_port: 6379
+redis_url: ""
+
+# Monitoring Stack Ports
+postgres_exporter_port: 9187
+redis_exporter_port: 9121
+prometheus_port: 9091
+
+# Secrets (Wajib diganti untuk keamanan produksi!)
+jwt_secret: "sitako-secret-jwt-key-production-replace-me"
+captcha_secret: "sitako-secret-captcha-key-production-replace-me"
+
+# Tripay Payment Gateway (Sandbox / Production)
+tripay_api_key: ""
+tripay_private_key: ""
+tripay_merchant_code: ""
+tripay_api_url: "https://tripay.co.id/api-sandbox/"
+
+# Mailer (SMTP)
+mail_host: "smtp.gmail.com"
+mail_port: 465
+mail_user: "email-kamu@gmail.com"
+mail_pass: "app-password-kamu"
+mail_from: "email-kamu@gmail.com"
+
+# Cloudflare R2 / S3 Object Storage
+s3_endpoint: "https://account-id.r2.cloudflarestorage.com"
+s3_access_key_id: ""
+s3_secret_access_key: ""
+s3_bucket_name: "sitako-bucket"
+public_storage_url: "https://pub-xxxxxx.r2.dev"

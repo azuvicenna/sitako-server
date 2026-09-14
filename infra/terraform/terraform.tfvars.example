@@ -1,0 +1,38 @@
+# =============================================================================
+# Contoh Konfigurasi Variabel Terraform untuk SITAKO Backend
+# Salin file ini menjadi `terraform.tfvars` dan sesuaikan nilainya:
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# AWS Region (misal: ap-southeast-1 untuk Singapura/Indonesia)
+aws_region = "ap-southeast-1"
+
+# Environment (staging / production)
+environment = "production"
+
+# Penamaan project
+project_name = "sitako"
+
+# Tipe instance EC2
+# - t3.small  (2 vCPU, 2 GB RAM)  : Minimum testing/dev
+# - t3.medium (2 vCPU, 4 GB RAM)  : Rekomendasi (Postgres, Redis, 2 replica app, Prometheus)
+# - t3.large  (2 vCPU, 8 GB RAM)  : Rekomendasi beban tinggi
+instance_type = "t3.medium"
+
+# Ukuran disk (EBS root volume dalam GB)
+volume_size = 30
+
+# Path ke file SSH Public Key di komputer lokal Anda
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# Batasi akses SSH hanya untuk IP publik Anda demi keamanan ekstra
+# Dapatkan IP publik Anda dengan: curl https://checkip.amazonaws.com
+# Contoh: allowed_ssh_cidr = ["103.24.56.78/32"]
+allowed_ssh_cidr = ["0.0.0.0/0"]
+
+# Akses publik untuk HTTP & HTTPS (0.0.0.0/0 untuk publik)
+allowed_http_cidr = ["0.0.0.0/0"]
+
+# Akses ke dashboard Prometheus (Port 9091)
+# Sangat disarankan hanya membuka untuk IP admin / dev
+allowed_monitoring_cidr = ["0.0.0.0/0"]

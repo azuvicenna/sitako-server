@@ -1,0 +1,163 @@
+---
+# =============================================================================
+# Role: sitako
+# Task: Sinkronisasi file, konfigurasi .env, build image, compose up, & migrasi DB
+# =============================================================================
+
+- name: Pastikan direktori aplikasi SITAKO tersedia di server
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  loop:
+    - "{{ app_dir }}"
+    - "{{ app_dir }}/infra"
+    - "{{ app_dir }}/infra/nginx"
+    - "{{ app_dir }}/infra/prometheus"
+
+# -----------------------------------------------------------------------------
+# Sinkronisasi File Proyek ke Server
+# -----------------------------------------------------------------------------
+- name: Salin file konfigurasi utama proyek ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../{{ item }}"
+    dest: "{{ app_dir }}/{{ item }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  loop:
+    - "Dockerfile"
+    - "docker-compose.prod.yml"
+    - "package.json"
+    - "package-lock.json"
+    - "tsconfig.json"
+    - "drizzle.config.ts"
+
+- name: Salin direktori source code (src) ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../src"
+    dest: "{{ app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+    directory_mode: '0755'
+
+- name: Salin direktori migrasi Drizzle ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../drizzle"
+    dest: "{{ app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+    directory_mode: '0755'
+
+- name: Salin konfigurasi Nginx Load Balancer ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../infra/nginx/nginx.conf"
+    dest: "{{ app_dir }}/infra/nginx/nginx.conf"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+
+- name: Salin konfigurasi Prometheus ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../infra/prometheus.yml"
+    dest: "{{ app_dir }}/infra/prometheus.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+
+# -----------------------------------------------------------------------------
+# Template .env
+# -----------------------------------------------------------------------------
+- name: Buat file .env dari template Jinja2
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0600'
+
+# -----------------------------------------------------------------------------
+# Build Docker Image & Start Containers
+# -----------------------------------------------------------------------------
+- name: Build image Docker SITAKO Backend di server
+  ansible.builtin.command:
+    cmd: docker compose -f docker-compose.prod.yml build
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+  changed_when: true
+
+- name: Jalankan multi-replica container dengan Nginx Load Balancer
+  ansible.builtin.command:
+    cmd: "docker compose -f docker-compose.prod.yml up -d --scale app={{ replica_count }} --remove-orphans"
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+  changed_when: true
+
+# -----------------------------------------------------------------------------
+# Verifikasi & Health Check
+# -----------------------------------------------------------------------------
+- name: Tunggu hingga database PostgreSQL sehat (healthcheck)
+  ansible.builtin.command:
+    cmd: "docker compose -f docker-compose.prod.yml exec -T database pg_isready -U {{ postgres_user }} -d {{ postgres_db }}"
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+  register: db_ready_status
+  until: db_ready_status.rc == 0
+  retries: 15
+  delay: 3
+  changed_when: false
+
+- name: Tunggu hingga Nginx Load Balancer merespons request
+  ansible.builtin.uri:
+    url: "http://localhost:{{ lb_port }}/nginx-health"
+    method: GET
+    status_code: 200
+  register: nginx_health_status
+  until: nginx_health_status.status == 200
+  retries: 15
+  delay: 3
+
+# -----------------------------------------------------------------------------
+# Database Migration & Seeder
+# -----------------------------------------------------------------------------
+- name: Eksekusi migrasi skema database Drizzle (npm run db:migrate:prod)
+  ansible.builtin.command:
+    cmd: docker compose -f docker-compose.prod.yml exec -T app npm run db:migrate:prod
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+  register: migration_output
+  when: run_migration | bool
+  changed_when: "'No migrations to apply' not in migration_output.stdout"
+
+- name: Tampilkan log migrasi database
+  ansible.builtin.debug:
+    var: migration_output.stdout_lines
+  when: run_migration | bool
+
+- name: Eksekusi seeder akun pustakawan awal jika diaktifkan (npm run db:seed:prod)
+  ansible.builtin.command:
+    cmd: docker compose -f docker-compose.prod.yml exec -T app npm run db:seed:prod
+    chdir: "{{ app_dir }}"
+  become_user: "{{ app_user }}"
+  register: seed_output
+  when: run_seed | bool
+  changed_when: true
+
+- name: Tampilkan log seeder database
+  ansible.builtin.debug:
+    var: seed_output.stdout_lines
+  when: run_seed | bool
+
+- name: Verifikasi health check endpoint aplikasi utama SITAKO
+  ansible.builtin.uri:
+    url: "http://localhost:{{ lb_port }}/"
+    method: GET
+    status_code: 200
+  register: app_health_status
+  until: app_health_status.status == 200
+  retries: 10
+  delay: 3
