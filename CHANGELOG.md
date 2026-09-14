@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Membuat fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
 - Membuat cronjob/scheduler notifikasi email otomatis (dengan PostgreSQL distributed lock & reminder logs)
 - Menambahkan konfigurasi load balancer (Nginx) ke docker
+- Memperbarui Jenkinsfile agar mendukung pipeline deployment dinamis multi-target (Docker Standalone, Docker Multi-Replica, dan K3s)
+- Memindahkan modul `dotenv` ke `dependencies` utama agar script migrasi dan seeder production dapat memuat env dengan benar di dalam kontainer
 
 ### [2026-09-13]
 

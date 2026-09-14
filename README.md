@@ -204,7 +204,7 @@ Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster K3s (misa
 
 1. **Import Docker Image ke Runtime Containerd K3s:**
    ```bash
-   sudo k3s ctr images import sitako-backend.tar
+   sudo k3s ctr -n k8s.io images import sitako-backend.tar
    ```
 2. **Deploy Manifests (Namespace, Postgres, Redis, App, Monitoring):**
    ```bash
@@ -227,10 +227,27 @@ Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster K3s (misa
 
 ### CI/CD dengan Jenkins
 
-Aplikasi ini sudah dipasang otomatisasi melalui `Jenkinsfile`. Pipeline akan menjalankan tahapan berikut secara berurutan:
+Aplikasi ini sudah dipasang otomatisasi melalui `Jenkinsfile` dengan dukungan parameter pipeline dinamis (`Build with Parameters`). Anda dapat memilih target deployment sesuai kebutuhan:
 
-1. **Install Dependencies & Lint/Test** (`npm ci`, `npm run lint`, `npm test`)
-2. **Build TypeScript** (`npm run build`)
-3. **Docker Build** (Membungkus hasil build ke dalam image Docker)
-4. **Ship Image** (Menyimpan image ke dalam file `.tar` dan mengirimnya ke VM `sitako-vm` via Multipass)
-5. **Deploy** (Menjalankan `docker compose up -d` langsung di dalam VM)
+#### Parameter Pipeline:
+- **`DEPLOY_MODE`** (Pilihan target deployment):
+  - `docker-standalone`: Menjalankan kontainer tunggal menggunakan `docker-compose.yml` (port `8080`).
+  - `docker-multi-replica`: Menjalankan kontainer multi-replika menggunakan `docker-compose.prod.yml` dengan Nginx Load Balancer (port `80`).
+  - `k3s`: Menjalankan deployment ke Kubernetes cluster lokal (K3s) menggunakan manifest di folder `k8s/` (port `80` via Traefik Ingress).
+- **`REPLICA_COUNT`**: Menentukan jumlah replika service backend (khusus mode `docker-multi-replica`, default: `2`).
+- **`RUN_MIGRATION`**: Menjalankan migrasi database otomatis (`npm run db:migrate:prod`) setelah deployment berhasil (default: `true`).
+
+#### Tahapan Pipeline:
+1. **Checkout**: Mengambil kode sumber dari repository Git.
+2. **Install Dependencies**: Menjalankan `npm ci`.
+3. **Lint & Test**: Menjalankan pengujian otomatis (`npm test --if-present`) dan linting (`npm run lint --if-present`).
+4. **Build**: Melakukan kompilasi TypeScript (`npm run build`).
+5. **Docker Build**: Membuat image Docker `${APP_NAME}:latest` dan mengekspornya menjadi file `.tar`.
+6. **Ship Image to VM**: Mentransfer file image `.tar` ke Multipass VM tujuan (`sitako-vm`).
+7. **Deploy (Dinamis sesuai `DEPLOY_MODE`)**:
+   - **Standalone**: Mentransfer `docker-compose.yml` & `infra/`, memuat image (`docker load`), menjalankan `docker compose -f docker-compose.yml up -d --remove-orphans`, dan mengeksekusi migrasi DB.
+   - **Multi-Replica**: Mentransfer `docker-compose.prod.yml` & `infra/`, memuat image (`docker load`), menjalankan `docker compose -f docker-compose.prod.yml up -d --scale app=${REPLICA_COUNT} --remove-orphans`, dan mengeksekusi migrasi DB.
+   - **K3s**: Mentransfer folder `k8s/`, mengimpor image ke containerd K3s (`sudo k3s ctr -n k8s.io images import`), menerapkan seluruh manifest Kubernetes, memicu rollout restart, dan mengeksekusi migrasi DB di dalam Pod.
+8. **Health Check**: Menguji endpoint aplikasi secara dinamis (port `8080` untuk standalone, port `80` untuk multi-replica dan K3s) dengan mekanisme retry otomatis.
+9. **Cleanup**: Membersihkan file `.tar` di workspace Jenkins dan di dalam VM Multipass.
+
