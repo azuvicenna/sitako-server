@@ -7,8 +7,12 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: ${NODE_ENV:-production}
+    # ⬇️ [JIKA PAKAI LOAD BALANCER: COMMENT BARIS INI]
+    # Agar Docker bisa membuat nama kontainer unik untuk tiap replika (--scale app=2)
     container_name: sitako-app
     restart: unless-stopped
+    # ⬇️ [JIKA PAKAI LOAD BALANCER: COMMENT 2 BARIS PORTS INI]
+    # Agar tidak bentrok port di host. Port publik akan dipegang oleh service loadbalancer (Nginx)
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     environment:
