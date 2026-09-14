@@ -137,9 +137,11 @@ Tersedia 9 skenario pengujian beban (*load & performance testing*) menggunakan k
 
 ### Menggunakan Docker & Monitoring Stack
 
-Jika ingin menjalankan aplikasi beserta seluruh ekosistem pendukungnya (PostgreSQL, Redis, Exporters, dan Prometheus):
+Tersedia 2 mode deployment Docker:
 
-- Build dan jalankan seluruh container di background:
+#### 1. Mode Standalone (Single Instance)
+Cocok untuk pengembangan atau server dengan beban standar:
+- Menjalankan seluruh container di background:
   ```bash
   docker compose up -d
   ```
@@ -147,9 +149,24 @@ Jika ingin menjalankan aplikasi beserta seluruh ekosistem pendukungnya (PostgreS
   ```bash
   docker logs -f sitako-app
   ```
-- Menghentikan dan menghapus semua container yang sedang berjalan:
+- Menghentikan container:
   ```bash
   docker compose down
+  ```
+
+#### 2. Mode Production dengan Nginx Load Balancer (Multi-Replica)
+Menggunakan reverse proxy Nginx di port 80 dan mendukung horizontal scaling kontainer `app`:
+- Menjalankan dengan 2 replika backend `app`:
+  ```bash
+  docker compose -f docker-compose.prod.yml up -d --scale app=2
+  ```
+- Melihat log load balancer / app:
+  ```bash
+  docker logs -f sitako-loadbalancer
+  ```
+- Menghentikan container production:
+  ```bash
+  docker compose -f docker-compose.prod.yml down
   ```
 
 Akses layanan pendukung:

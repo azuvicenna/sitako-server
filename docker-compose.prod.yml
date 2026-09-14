@@ -1,16 +1,21 @@
 name: sitako-backend
+# -----------------------------------------------------------------------------
+# SITAKO Backend - Production Compose with Nginx Load Balancer
+# 
+# Jalankan dengan:
+#   docker compose -f docker-compose.prod.yml up -d --scale app=2
+# -----------------------------------------------------------------------------
 
 services:
+  # Service App (Backend Node.js)
+  # Tanpa container_name & port mapping host agar siap di-scale multi-replica
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         NODE_ENV: ${NODE_ENV:-production}
-    container_name: sitako-app
     restart: unless-stopped
-    ports:
-      - "${PORT:-8080}:${PORT:-8080}"
     environment:
       - APP_NAME=${APP_NAME:-SITAKO-backend}
       - NODE_ENV=${NODE_ENV:-production}
@@ -40,6 +45,26 @@ services:
         max-file: "3"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # Service Load Balancer (Nginx Reverse Proxy)
+  # Menerima trafik publik di port 80 (atau LB_PORT) dan membaginya ke seluruh replika app
+  loadbalancer:
+    image: nginx:alpine
+    container_name: sitako-loadbalancer
+    restart: unless-stopped
+    ports:
+      - "${LB_PORT:-80}:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   database:
     image: postgres:18-alpine
