@@ -14,6 +14,7 @@ import { sendFail } from "@/utils/core/handler";
 
 const app: Application = express();
 
+app.set("trust proxy", 1);
 app.use(metricsMiddleware);
 app.use(helmet());
 app.use(

@@ -61,6 +61,8 @@ pipeline {
                     multipass exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
                     multipass transfer ${APP_NAME}.tar ${VM_NAME}:${VM_APP_DIR}/${APP_NAME}.tar
                     multipass transfer docker-compose.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.yml
+                    multipass transfer docker-compose.prod.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.prod.yml
+                    multipass transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
                     multipass exec ${VM_NAME} -- docker load -i ${VM_APP_DIR}/${APP_NAME}.tar
                 """
             }

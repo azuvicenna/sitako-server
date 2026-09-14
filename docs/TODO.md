@@ -30,7 +30,7 @@
 
 ## ✅ Selesai (Completed)
 
-- [x] Menambahkan konfigurasi load balancer (Nginx) ke docker (dikomentari siap pakai)
+- [x] Menambahkan konfigurasi load balancer (Nginx) ke docker
 - [x] Fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
 - [x] Membuat cronjob/scheduler notifikasi email otomatis (dengan PostgreSQL distributed lock & reminder logs)
 - [x] Endpoint GET dashboard untuk member (`/api/member/dashboard`)

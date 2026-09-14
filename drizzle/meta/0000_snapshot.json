@@ -1,0 +1,944 @@
+{
+  "id": "42c9068c-b781-4ba3-b21c-8197f4b3e6a1",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.bookmarks": {
+      "name": "bookmarks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "buku_id": {
+          "name": "buku_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "anggota_id": {
+          "name": "anggota_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bookmarks_buku_id_books_id_fk": {
+          "name": "bookmarks_buku_id_books_id_fk",
+          "tableFrom": "bookmarks",
+          "tableTo": "books",
+          "columnsFrom": [
+            "buku_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "bookmarks_anggota_id_members_id_fk": {
+          "name": "bookmarks_anggota_id_members_id_fk",
+          "tableFrom": "bookmarks",
+          "tableTo": "members",
+          "columnsFrom": [
+            "anggota_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.books": {
+      "name": "books",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "judul": {
+          "name": "judul",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "penulis": {
+          "name": "penulis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isbn": {
+          "name": "isbn",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "penerbit": {
+          "name": "penerbit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "genre": {
+          "name": "genre",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe_buku": {
+          "name": "tipe_buku",
+          "type": "tipe_buku_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Fisik'"
+        },
+        "tahun_terbit": {
+          "name": "tahun_terbit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_stok": {
+          "name": "jumlah_stok",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cover": {
+          "name": "cover",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "file_digital": {
+          "name": "file_digital",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.payments": {
+      "name": "payments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "pustakawan_id": {
+          "name": "pustakawan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "anggota_id": {
+          "name": "anggota_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaksi_id": {
+          "name": "transaksi_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "harga_denda": {
+          "name": "harga_denda",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_denda": {
+          "name": "total_denda",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tgl_bayar": {
+          "name": "tgl_bayar",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metode_pembayaran": {
+          "name": "metode_pembayaran",
+          "type": "metode_pembayaran_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Tunai'"
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "status_pembayaran_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UNPAID'"
+        },
+        "tripay_reference": {
+          "name": "tripay_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payment_method_code": {
+          "name": "payment_method_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checkout_url": {
+          "name": "checkout_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payments_pustakawan_id_librarians_id_fk": {
+          "name": "payments_pustakawan_id_librarians_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "librarians",
+          "columnsFrom": [
+            "pustakawan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "payments_anggota_id_members_id_fk": {
+          "name": "payments_anggota_id_members_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "members",
+          "columnsFrom": [
+            "anggota_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "payments_transaksi_id_transactions_id_fk": {
+          "name": "payments_transaksi_id_transactions_id_fk",
+          "tableFrom": "payments",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaksi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "payments_tripay_reference_unique": {
+          "name": "payments_tripay_reference_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tripay_reference"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fines": {
+      "name": "fines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "buku_id": {
+          "name": "buku_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis_denda": {
+          "name": "jenis_denda",
+          "type": "tipe_denda_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Terlambat'"
+        },
+        "harga_denda": {
+          "name": "harga_denda",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metode_perhitungan": {
+          "name": "metode_perhitungan",
+          "type": "tipe_kalkulasi_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Akumulasi'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fines_buku_id_books_id_fk": {
+          "name": "fines_buku_id_books_id_fk",
+          "tableFrom": "fines",
+          "tableTo": "books",
+          "columnsFrom": [
+            "buku_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.librarians": {
+      "name": "librarians",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nip": {
+          "name": "nip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telepon": {
+          "name": "telepon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "foto": {
+          "name": "foto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_aktif": {
+          "name": "status_aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.members": {
+      "name": "members",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nis": {
+          "name": "nis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telepon": {
+          "name": "telepon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "foto": {
+          "name": "foto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_aktif": {
+          "name": "status_aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reminder_logs": {
+      "name": "reminder_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "transaksi_id": {
+          "name": "transaksi_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe_pengingat": {
+          "name": "tipe_pengingat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_date": {
+          "name": "sent_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reminder_tx_type_date_idx": {
+          "name": "reminder_tx_type_date_idx",
+          "columns": [
+            {
+              "expression": "transaksi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tipe_pengingat",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sent_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reminder_logs_transaksi_id_transactions_id_fk": {
+          "name": "reminder_logs_transaksi_id_transactions_id_fk",
+          "tableFrom": "reminder_logs",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaksi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.scheduler_locks": {
+      "name": "scheduler_locks",
+      "schema": "",
+      "columns": {
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "locked_by": {
+          "name": "locked_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.shelves": {
+      "name": "shelves",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama_rak": {
+          "name": "nama_rak",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stacks": {
+      "name": "stacks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "rak_id": {
+          "name": "rak_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "buku_id": {
+          "name": "buku_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kd_susunan": {
+          "name": "kd_susunan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nomor_susunan": {
+          "name": "nomor_susunan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rak_nomor_idx": {
+          "name": "rak_nomor_idx",
+          "columns": [
+            {
+              "expression": "rak_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nomor_susunan",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "stacks_rak_id_shelves_id_fk": {
+          "name": "stacks_rak_id_shelves_id_fk",
+          "tableFrom": "stacks",
+          "tableTo": "shelves",
+          "columnsFrom": [
+            "rak_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "stacks_buku_id_books_id_fk": {
+          "name": "stacks_buku_id_books_id_fk",
+          "tableFrom": "stacks",
+          "tableTo": "books",
+          "columnsFrom": [
+            "buku_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "buku_id": {
+          "name": "buku_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pustakawan_id": {
+          "name": "pustakawan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "anggota_id": {
+          "name": "anggota_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kd_transaksi": {
+          "name": "kd_transaksi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tgl_pinjam": {
+          "name": "tgl_pinjam",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "tgl_kembali": {
+          "name": "tgl_kembali",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "status_transaksi_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Menunggu Persetujuan'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transactions_buku_id_books_id_fk": {
+          "name": "transactions_buku_id_books_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "books",
+          "columnsFrom": [
+            "buku_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "transactions_pustakawan_id_librarians_id_fk": {
+          "name": "transactions_pustakawan_id_librarians_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "librarians",
+          "columnsFrom": [
+            "pustakawan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        },
+        "transactions_anggota_id_members_id_fk": {
+          "name": "transactions_anggota_id_members_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "members",
+          "columnsFrom": [
+            "anggota_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.tipe_buku_enum": {
+      "name": "tipe_buku_enum",
+      "schema": "public",
+      "values": [
+        "Fisik",
+        "Digital"
+      ]
+    },
+    "public.tipe_kalkulasi_enum": {
+      "name": "tipe_kalkulasi_enum",
+      "schema": "public",
+      "values": [
+        "Akumulasi",
+        "Flat"
+      ]
+    },
+    "public.tipe_denda_enum": {
+      "name": "tipe_denda_enum",
+      "schema": "public",
+      "values": [
+        "Terlambat",
+        "Hilang"
+      ]
+    },
+    "public.metode_pembayaran_enum": {
+      "name": "metode_pembayaran_enum",
+      "schema": "public",
+      "values": [
+        "Tunai",
+        "Non-Tunai"
+      ]
+    },
+    "public.status_pembayaran_enum": {
+      "name": "status_pembayaran_enum",
+      "schema": "public",
+      "values": [
+        "UNPAID",
+        "PAID",
+        "EXPIRED",
+        "FAILED"
+      ]
+    },
+    "public.status_transaksi_enum": {
+      "name": "status_transaksi_enum",
+      "schema": "public",
+      "values": [
+        "Menunggu Persetujuan",
+        "Dibatalkan",
+        "Menunggu Diambil",
+        "Dipinjam",
+        "Dikembalikan",
+        "Terlambat",
+        "Tidak Mengembalikan"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -33,6 +33,10 @@ export const paymentMethodEnum = {
   enumValues: ["Tunai", "Non-Tunai"] as const,
 };
 
+export const paymentStatusEnum = {
+  enumValues: ["UNPAID", "PAID", "EXPIRED", "FAILED"] as const,
+};
+
 // Tabel mock (tidak dipakai langsung, tapi perlu diekspor untuk schema.ts)
 export const librarians = {};
 export const members = {};

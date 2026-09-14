@@ -61,7 +61,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/nginx-health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

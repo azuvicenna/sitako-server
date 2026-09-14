@@ -18,6 +18,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fontconfig \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
@@ -25,6 +26,8 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/templates ./src/templates
+COPY --from=builder /app/drizzle ./drizzle
 
 EXPOSE 8080
 

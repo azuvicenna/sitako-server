@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Membuat fitur cetak laporan typst dan excel/csv
 - Membuat fitur otomatis kirim email peringatan pengembalian, perubahan status peminjaman, pembayaran denda, pembayaran denda sukses
 - Membuat cronjob/scheduler notifikasi email otomatis (dengan PostgreSQL distributed lock & reminder logs)
+- Menambahkan konfigurasi load balancer (Nginx) ke docker
 
 ### [2026-09-13]
 

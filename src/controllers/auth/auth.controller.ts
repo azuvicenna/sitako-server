@@ -5,10 +5,19 @@ import { authenticateUser } from "@/services/auth/auth.service";
 import { sendError, sendFail, sendSuccess } from "@/utils/core/handler";
 import logger from "@/utils/core/logger";
 
+const isProduction = process.env.NODE_ENV === "production";
+const isLocalEnv =
+  process.env.APP_ENV === "local" || process.env.APP_ENV === "development";
+
+const isCookieSecure =
+  process.env.COOKIE_SECURE !== undefined
+    ? process.env.COOKIE_SECURE === "true"
+    : isProduction && !isLocalEnv;
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  secure: isCookieSecure,
+  sameSite: "lax" as const,
   path: "/",
 };
 

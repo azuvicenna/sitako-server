@@ -76,12 +76,19 @@ Gunakan perintah berikut untuk pengembangan lokal:
   docker compose up -d database redis
   ```
 
-Perintah khusus untuk database (Drizzle ORM):
+Perintah khusus untuk database (Drizzle ORM & Seeder):
 
-- `npm run db:generate` : Membuat file migrasi dari skema terbaru.
-- `npm run db:migrate` : Mengeksekusi migrasi ke database.
-- `npm run db:push` : Mendorong perubahan skema langsung ke database (cocok untuk dev).
+- `npm run db:generate` : Membuat file migrasi SQL baru dari skema terbaru ke folder `drizzle/`.
+- `npm run db:migrate` : Mengeksekusi migrasi skema ke database (mode dev via tsx).
+- `npm run db:migrate:prod` : Mengeksekusi migrasi skema ke database (mode prod via Node.js murni).
+- `npm run db:seed` : Mengisi akun pustakawan awal jika database masih kosong (mode dev via tsx).
+- `npm run db:seed:prod` : Mengisi akun pustakawan awal jika database masih kosong (mode prod via Node.js murni).
+- `npm run db:push` : Mendorong perubahan skema langsung ke database tanpa file migrasi (khusus dev lokal).
 - `npm run db:studio` : Membuka antarmuka web GUI Drizzle Studio untuk melihat dan mengelola isi database.
+
+> **Kredensial Akun Pustakawan Default (hasil seeder):**
+> - **NIP:** `198001012005011001`
+> - **Password:** `admin123`
 
 ### Type Checking & Build Production
 
@@ -145,6 +152,14 @@ Cocok untuk pengembangan atau server dengan beban standar:
   ```bash
   docker compose up -d
   ```
+- Menjalankan migrasi database di dalam kontainer:
+  ```bash
+  docker compose exec app npm run db:migrate:prod
+  ```
+- Mengisi akun pustakawan awal:
+  ```bash
+  docker compose exec app npm run db:seed:prod
+  ```
 - Melihat log dari container aplikasi:
   ```bash
   docker logs -f sitako-app
@@ -160,6 +175,14 @@ Menggunakan reverse proxy Nginx di port 80 dan mendukung horizontal scaling kont
   ```bash
   docker compose -f docker-compose.prod.yml up -d --scale app=2
   ```
+- Menjalankan migrasi database di dalam kontainer:
+  ```bash
+  docker compose -f docker-compose.prod.yml exec app npm run db:migrate:prod
+  ```
+- Mengisi akun pustakawan awal:
+  ```bash
+  docker compose -f docker-compose.prod.yml exec app npm run db:seed:prod
+  ```
 - Melihat log load balancer / app:
   ```bash
   docker logs -f sitako-loadbalancer
@@ -174,6 +197,33 @@ Akses layanan pendukung:
 - **Prometheus UI**: `http://localhost:9091`
 - **Application Metrics**: `http://localhost:8080/metrics`
 - **Health Check Endpoint**: `http://localhost:8080/`
+
+### Deployment ke Kubernetes (K3s)
+
+Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster K3s (misalnya di VM Multipass):
+
+1. **Import Docker Image ke Runtime Containerd K3s:**
+   ```bash
+   sudo k3s ctr images import sitako-backend.tar
+   ```
+2. **Deploy Manifests (Namespace, Postgres, Redis, App, Monitoring):**
+   ```bash
+   kubectl apply -f k8s/00-namespace-and-config.yaml
+   kubectl apply -f k8s/01-postgres.yaml
+   kubectl apply -f k8s/02-redis.yaml
+   kubectl apply -f k8s/03-app.yaml
+   kubectl apply -f k8s/04-monitoring.yaml
+   ```
+3. **Eksekusi Migrasi Skema & Seeder Akun Awal di Pod:**
+   ```bash
+   kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
+   kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:seed:prod
+   ```
+4. **Melihat Status Pod & Ingress Traefik:**
+   ```bash
+   kubectl get pods,svc,ingress -n sitako
+   ```
+
 
 ### CI/CD dengan Jenkins
 

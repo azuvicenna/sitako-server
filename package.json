@@ -22,7 +22,10 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:prod": "node dist/db/migrate.js",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:seed:prod": "node dist/db/seed.js",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
