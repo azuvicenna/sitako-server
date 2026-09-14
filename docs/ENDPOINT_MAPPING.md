@@ -125,3 +125,10 @@ Berikut adalah mapping alur fungsi dari masing-masing fitur utama beserta deskri
 | Endpoint | HTTP Method | Fungsi / Deskripsi | Method Controller | Method Service | Method Repository |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `/member/dashboard` | GET | Mengambil statistik buku dipinjam, total denda, bookmark, transaksi aktif, tagihan denda, dan bookmark terbaru member | `getMemberDashboard` | `getMemberDashboardService` | `getMemberDashboardRepo` |
+
+### 10. Fitur Laporan Sirkulasi & Denda (`/reports`)
+
+| Endpoint | HTTP Method | Fungsi / Deskripsi | Method Controller | Method Service | Method Repository |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/reports/circulation` | GET | Mengambil laporan sirkulasi peminjaman buku (preview JSON, ekspor Excel, CSV, PDF) | `getCirculationReportHandler` | `getCirculationReport`, `exportCirculationExcel`, `exportCirculationCsv`, `exportReportPdf` | `getCirculationReport` |
+| `/reports/fines` | GET | Mengambil laporan pembayaran denda (preview JSON, ekspor Excel, CSV, PDF) | `getFineReportHandler` | `getFineReport`, `exportFineExcel`, `exportFineCsv`, `exportReportPdf` | `getFineReport` |

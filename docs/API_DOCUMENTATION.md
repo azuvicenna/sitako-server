@@ -22,8 +22,9 @@ Dokumentasi ini disusun khusus untuk tim Frontend sebagai panduan integrasi leng
 15. [Pembayaran Denda Online - Anggota (`/api/member/fine-payments`)](#13-pembayaran-denda-online---anggota-apimemberfine-payments)
 16. [Dashboard - Anggota (`/api/member/dashboard`)](#14-dashboard---anggota-apimemberdashboard)
 17. [Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)](#15-webhook-payment-gateway-tripay-apiwebhookstripay)
-18. [Daftar Enum Database](#16-daftar-enum-database)
-19. [Tips & Panduan Integrasi Frontend](#tips--panduan-integrasi-frontend)
+18. [Laporan Sirkulasi & Denda - Pustakawan (`/api/reports`)](#16-laporan-sirkulasi--denda---pustakawan-apireports)
+19. [Daftar Enum Database](#17-daftar-enum-database)
+20. [Tips & Panduan Integrasi Frontend](#18-tips--panduan-integrasi-frontend)
 
 ---
 
@@ -3428,7 +3429,139 @@ Endpoint penerima callback otomatis dari server Tripay ketika transaksi denda on
 
 ---
 
-## 15. Daftar Enum Database
+## 16. Laporan Sirkulasi & Denda - Pustakawan (`/api/reports`)
+
+Endpoint laporan sirkulasi transaksi peminjaman buku dan laporan pembayaran denda, mendukung preview JSON untuk tabel Frontend serta ekspor file Excel (`.xlsx`), CSV (`.csv`), dan PDF (`.pdf`).
+
+### 16.1 Laporan Sirkulasi Peminjaman
+- **Method**: `GET`
+- **URL**: `/api/reports/circulation`
+- **Auth**: Wajib (Pustakawan)
+- **Query Parameters**:
+  | Parameter | Tipe | Wajib? | Default | Keterangan |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `startDate` | string | Opsional | - | Tanggal awal filter `tglPinjam` (format `YYYY-MM-DD`, inklusif) |
+  | `endDate` | string | Opsional | - | Tanggal akhir filter `tglPinjam` (format `YYYY-MM-DD`, inklusif) |
+  | `format` | string | Opsional | `json` | Pilihan: `json`, `csv`, `xlsx`, `pdf` |
+- **Response Berhasil (200 OK - format=json)**:
+  ```json
+  {
+    "success": true,
+    "message": "Data retrieved successfully",
+    "data": [
+      {
+        "kdTransaksi": "TRX-20260901-0001",
+        "namaPeminjam": "Ahmad Siswa",
+        "judulBuku": "Laskar Pelangi",
+        "tglPinjam": "2026-09-01T08:00:00.000Z",
+        "tglKembali": "2026-09-08T10:00:00.000Z",
+        "status": "Dikembalikan"
+      }
+    ]
+  }
+  ```
+- **Response Berhasil (200 OK - format=csv / xlsx / pdf)**:
+  - `format=csv`:
+    - Header `Content-Type`: `text/csv; charset=utf-8`
+    - Header `Content-Disposition`: `attachment; filename="laporan-sirkulasi-YYYY-MM-DD.csv"`
+    - Kolom: `["Kode Transaksi", "Nama Peminjam", "Judul Buku", "Tgl Pinjam", "Tgl Kembali", "Status"]`
+  - `format=xlsx`:
+    - Header `Content-Type`: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+    - Header `Content-Disposition`: `attachment; filename="laporan-sirkulasi-YYYY-MM-DD.xlsx"`
+    - Sheet Name: `Laporan Sirkulasi`
+  - `format=pdf`:
+    - Header `Content-Type`: `application/pdf`
+    - Header `Content-Disposition`: `attachment; filename="laporan-sirkulasi-denda-YYYY-MM-DD.pdf"`
+    - Dokumen PDF A4 hasil compile Typst dengan tabel sirkulasi dan tabel denda untuk periode terkait.
+- **Response Error**:
+  - `400 Bad Request` (Format tanggal tidak valid atau `startDate > endDate`):
+    ```json
+    {
+      "success": false,
+      "message": "Validasi gagal",
+      "errors": [
+        {
+          "field": "startDate",
+          "message": "startDate tidak boleh lebih besar dari endDate"
+        }
+      ]
+    }
+    ```
+  - `401 Unauthorized` (Belum login):
+    ```json
+    {
+      "success": false,
+      "message": "Akses ditolak. Belum login."
+    }
+    ```
+
+---
+
+### 16.2 Laporan Pembayaran Denda
+- **Method**: `GET`
+- **URL**: `/api/reports/fines`
+- **Auth**: Wajib (Pustakawan)
+- **Query Parameters**:
+  | Parameter | Tipe | Wajib? | Default | Keterangan |
+  | :--- | :--- | :--- | :--- | :--- |
+  | `startDate` | string | Opsional | - | Tanggal awal filter `tglBayar` (format `YYYY-MM-DD`, inklusif) |
+  | `endDate` | string | Opsional | - | Tanggal akhir filter `tglBayar` (format `YYYY-MM-DD`, inklusif) |
+  | `format` | string | Opsional | `json` | Pilihan: `json`, `csv`, `xlsx`, `pdf` |
+- **Response Berhasil (200 OK - format=json)**:
+  ```json
+  {
+    "success": true,
+    "message": "Data retrieved successfully",
+    "data": [
+      {
+        "namaPeminjam": "Ahmad Siswa",
+        "judulBuku": "Laskar Pelangi",
+        "totalDenda": 5000,
+        "metodePembayaran": "Tunai",
+        "paymentStatus": "PAID",
+        "tglBayar": "2026-09-08T10:15:00.000Z"
+      }
+    ]
+  }
+  ```
+- **Response Berhasil (200 OK - format=csv / xlsx / pdf)**:
+  - `format=csv`:
+    - Header `Content-Type`: `text/csv; charset=utf-8`
+    - Header `Content-Disposition`: `attachment; filename="laporan-denda-YYYY-MM-DD.csv"`
+    - Kolom: `["Nama Peminjam", "Judul Buku", "Total Denda", "Metode Pembayaran", "Status Pembayaran", "Tgl Bayar"]`
+  - `format=xlsx`:
+    - Header `Content-Type`: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+    - Header `Content-Disposition`: `attachment; filename="laporan-denda-YYYY-MM-DD.xlsx"`
+    - Sheet Name: `Laporan Denda`
+  - `format=pdf`:
+    - Header `Content-Type`: `application/pdf`
+    - Header `Content-Disposition`: `attachment; filename="laporan-sirkulasi-denda-YYYY-MM-DD.pdf"`
+    - Dokumen PDF A4 hasil compile Typst dengan tabel sirkulasi dan tabel denda untuk periode terkait.
+- **Response Error**:
+  - `400 Bad Request` (Format tanggal tidak valid atau `startDate > endDate`):
+    ```json
+    {
+      "success": false,
+      "message": "Validasi gagal",
+      "errors": [
+        {
+          "field": "startDate",
+          "message": "startDate tidak boleh lebih besar dari endDate"
+        }
+      ]
+    }
+    ```
+  - `401 Unauthorized` (Belum login):
+    ```json
+    {
+      "success": false,
+      "message": "Akses ditolak. Belum login."
+    }
+    ```
+
+---
+
+## 17. Daftar Enum Database
 
 Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabel di Frontend:
 
@@ -3465,7 +3598,7 @@ Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabe
 
 ---
 
-## Tips & Panduan Integrasi Frontend
+## 18. Tips & Panduan Integrasi Frontend
 
 1. **Pengaturan Axios Client**:
    ```typescript

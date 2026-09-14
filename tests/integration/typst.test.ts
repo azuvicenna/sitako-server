@@ -1,9 +1,14 @@
 import * as fs from "fs/promises";
 import * as typst from "typst";
+import * as crypto from "crypto";
 import { compileTypstFile } from "@/utils/services/typst";
 
 jest.mock("fs/promises");
 jest.mock("typst");
+jest.mock("crypto", () => ({
+  ...jest.requireActual("crypto"),
+  randomUUID: () => "",
+}));
 
 describe("compileTypstFile Unit Test", () => {
   let dateSpy: jest.SpyInstance;
@@ -36,18 +41,18 @@ describe("compileTypstFile Unit Test", () => {
       "utf-8",
     );
     expect(fs.writeFile).toHaveBeenCalledWith(
-      expect.stringContaining("invoice_1000000000_temp.typ"),
+      expect.stringMatching(/invoice_1000000000.*temp\.typ$/),
       "Halo Budi, tagihanmu 50000.",
       "utf-8",
     );
     expect(typst.compile).toHaveBeenCalledWith(
-      expect.stringContaining("invoice_1000000000_temp.typ"),
-      expect.stringContaining("invoice_1000000000.pdf"),
+      expect.stringMatching(/invoice_1000000000.*temp\.typ$/),
+      expect.stringMatching(/invoice_1000000000.*\.pdf$/),
     );
     expect(fs.unlink).toHaveBeenCalledWith(
-      expect.stringContaining("invoice_1000000000_temp.typ"),
+      expect.stringMatching(/invoice_1000000000.*temp\.typ$/),
     );
-    expect(result).toMatch(/invoice_1000000000\.pdf$/);
+    expect(result).toMatch(/invoice_1000000000.*\.pdf$/);
   });
 
   it("should always delete temp file even if compilation fails", async () => {
@@ -60,7 +65,7 @@ describe("compileTypstFile Unit Test", () => {
     );
 
     expect(fs.unlink).toHaveBeenCalledWith(
-      expect.stringContaining("error_1000000000_temp.typ"),
+      expect.stringMatching(/error_1000000000.*temp\.typ$/),
     );
   });
 });

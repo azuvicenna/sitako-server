@@ -12,6 +12,7 @@ module.exports = {
     // PENTING: Pattern lebih spesifik harus di atas pattern umum
     "^dotenv/config$": "<rootDir>/tests/helpers/dotenv-mock.js",
     "^uuid$": "<rootDir>/tests/helpers/uuid-mock.js",
+    "^typst$": "<rootDir>/tests/helpers/typst-mock.js",
     "^multer$": "<rootDir>/tests/helpers/multer-mock.js",
     "^@/db$": "<rootDir>/tests/helpers/db-mock.ts",
     "^@/db/(.*)$": "<rootDir>/tests/helpers/db-mock.ts",
