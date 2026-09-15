@@ -1,7 +1,7 @@
 {
-  "name": "sitako",
+  "name": "sitako-server",
   "version": "1.0.0",
-  "description": "Sistem Informasi Perpustakaan Sekolah (SITAKO) Backend",
+  "description": "Sistem Informasi Perpustakaan Sekolah (SITAKO) Server",
   "main": "index.js",
   "scripts": {
     "test": "jest",
