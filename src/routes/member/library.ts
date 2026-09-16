@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { paginationSchema } from '@/validations/utils/pagination.schema';
 import { createBookmarkSchema } from '@/validations/member/bookmark.schema';
@@ -15,7 +15,7 @@ import {
 
 const router: Router = Router();
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Anggota'));
 
 router.get('/', validate(paginationSchema, 'query'), getAvailableBooks);
 router.get('/bookmark', validate(paginationSchema, 'query'), getMyBookmarks);

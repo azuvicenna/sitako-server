@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import * as librarianService from '@/services/librarian/librarian.service';
-import * as memberService from '@/services/librarian/member.service';
+import { getProfileService, updateProfileService } from '@/services/profile/profile.service';
 import { sendError, sendFail, sendSuccess } from '@/utils/core/handler';
-import { imageFileSchema, updateLibrarianSchema } from '@/validations/librarian/librarian.schema';
-import { updateMemberSchema } from '@/validations/librarian/member.schema';
+import { imageFileSchema } from '@/validations/librarian/librarian.schema';
 
 export const getMyProfile = async (req: Request, res: Response) => {
   try {
@@ -14,10 +12,7 @@ export const getMyProfile = async (req: Request, res: Response) => {
       return sendFail(res, 401, 'Pengguna tidak terautentikasi');
     }
 
-    const result =
-      role === 'Pustakawan'
-        ? await librarianService.getLibrarianById(userId)
-        : await memberService.getMemberById(userId);
+    const result = await getProfileService(userId, role);
 
     if (!result) {
       return sendFail(res, 404, 'Profil tidak ditemukan');
@@ -39,19 +34,7 @@ export const updateMyProfile = async (req: Request, res: Response) => {
     }
 
     const validatedFile = req.file ? imageFileSchema.parse(req.file) : undefined;
-
-    const result =
-      role === 'Pustakawan'
-        ? await librarianService.updateExistingLibrarian(
-            userId,
-            updateLibrarianSchema.parse(req.body),
-            validatedFile,
-          )
-        : await memberService.updateExistingMember(
-            userId,
-            updateMemberSchema.parse(req.body),
-            validatedFile,
-          );
+    const result = await updateProfileService(userId, role, req.body, validatedFile);
 
     if (!result) {
       return sendFail(res, 404, 'Profil tidak ditemukan');

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '@/app';
-import { librarianToken } from '../helpers/auth.helper';
+import { librarianToken, memberToken } from '../helpers/auth.helper';
 
 const mockFinePayment = {
   id: 'fp-id-001',
@@ -58,9 +58,11 @@ jest.mock('@/controllers/member/fine-payment.controller', () => ({
 
 describe('Fine Payment Endpoints', () => {
   let token: string;
+  let mToken: string;
 
   beforeAll(() => {
     token = librarianToken();
+    mToken = memberToken();
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -177,7 +179,7 @@ describe('Fine Payment Endpoints', () => {
     it('should return member fine payments with status 200', async () => {
       const res = await request(app)
         .get('/api/member/fine-payments')
-        .set('Cookie', `token=${token}`);
+        .set('Cookie', `token=${mToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -193,7 +195,7 @@ describe('Fine Payment Endpoints', () => {
     it('should return member fine payment detail with status 200', async () => {
       const res = await request(app)
         .get('/api/member/fine-payments/detail/fp-id-001')
-        .set('Cookie', `token=${token}`);
+        .set('Cookie', `token=${mToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveProperty('metodePembayaran');
@@ -209,7 +211,7 @@ describe('Fine Payment Endpoints', () => {
     it('should return 200 with valid data', async () => {
       const res = await request(app)
         .post('/api/member/fine-payments/pay')
-        .set('Cookie', `token=${token}`)
+        .set('Cookie', `token=${mToken}`)
         .send({
           transaksiId: 'tx-id-001',
           paymentMethodCode: 'QRIS',
@@ -222,7 +224,7 @@ describe('Fine Payment Endpoints', () => {
     it('should return 400 when required fields are missing', async () => {
       const res = await request(app)
         .post('/api/member/fine-payments/pay')
-        .set('Cookie', `token=${token}`)
+        .set('Cookie', `token=${mToken}`)
         .send({});
 
       expect(res.status).toBe(400);

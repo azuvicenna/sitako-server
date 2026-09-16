@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { paginationSchema } from '@/validations/utils/pagination.schema';
 import { createShelfSchema, updateShelfSchema } from '@/validations/librarian/shelf.schema';
@@ -22,7 +22,7 @@ import {
 
 const router: Router = Router();
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 
 router.get('/', validate(paginationSchema, 'query'), getShelvesHandler);
 router.get('/detail/:id', showShelf);

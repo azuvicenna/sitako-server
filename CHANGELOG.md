@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### [2026-09-16]
+
+#### Added
+
+- Menambahkan middleware `verifyRole` pada `src/middlewares/auth.middleware.ts` untuk kontrol akses berbasis peran (RBAC) dengan dukungan case-insensitive
+- Menambahkan proteksi `verifyRole('Pustakawan')` pada seluruh rute modul pustakawan (books, dashboard, fine-payments, fines, librarians, members, reports, shelves, transactions)
+- Menambahkan proteksi `verifyRole('Anggota')` pada seluruh rute modul anggota (member dashboard, fine-payments, library, transactions)
+- Membuat `src/services/profile/profile.service.ts` dengan *Strategy Pattern* (`RoleProfileStrategy`) untuk menangani logika profil pengguna berdasarkan peran tanpa percabangan manual
+- Menambahkan unit test untuk `verifyRole` middleware (`tests/unit/role.middleware.test.ts`) dan `profile.service` (`tests/unit/profile.service.test.ts`)
+
+#### Changed
+
+- Melakukan refactor pada `src/controllers/profile/profile.controller.ts` dengan mendelegasikan pemanggilan ke `profile.service.ts`, mengeliminasi pengecekan peran dan parsing skema manual berbasis `if-else`
+
 ### [2026-09-14]
 
 #### Added

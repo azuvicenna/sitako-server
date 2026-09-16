@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { reportQuerySchema } from '@/validations/librarian/report.schema';
 import {
@@ -9,7 +9,7 @@ import {
 
 const router: Router = Router();
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 
 router.get('/circulation', validate(reportQuerySchema, 'query'), getCirculationReportHandler);
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { upload } from '@/middlewares/upload.middleware';
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { paginationSchema } from '@/validations/utils/pagination.schema';
 import {
@@ -19,7 +19,7 @@ import {
 const router: Router = Router();
 const fotoUpload = upload.single('foto');
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 
 router.get('/', validate(paginationSchema, 'query'), getLibrarianHandler);
 router.get('/:id', showLibrarian);

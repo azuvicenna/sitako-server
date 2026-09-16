@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { paginationSchema } from '@/validations/utils/pagination.schema';
 import {
@@ -17,7 +17,7 @@ import {
 
 const router: Router = Router();
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 
 router.get('/', validate(paginationSchema, 'query'), getTransactionsHandler);
 router.get('/detail/:id', showTransaction);

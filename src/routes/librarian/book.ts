@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { verifyAuth } from '@/middlewares/auth.middleware';
+import { verifyAuth, verifyRole } from '@/middlewares/auth.middleware';
 import { upload } from '@/middlewares/upload.middleware';
 import { validate } from '@/middlewares/validate.middleware';
 import { paginationSchema } from '@/validations/utils/pagination.schema';
@@ -20,7 +20,7 @@ const bookUpload = upload.fields([
   { name: 'file', maxCount: 1 },
 ]);
 
-router.use(verifyAuth);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 
 router.get('/', validate(paginationSchema, 'query'), getBookHandler);
 router.get('/detail/:id', showBook);
