@@ -19,9 +19,9 @@ import {
 const router: Router = Router();
 const fotoUpload = upload.single('foto');
 
-router.use(verifyAuth, verifyRole('Pustakawan'));
+router.get('/', verifyAuth, validate(paginationSchema, 'query'), getLibrarianHandler);
 
-router.get('/', validate(paginationSchema, 'query'), getLibrarianHandler);
+router.use(verifyAuth, verifyRole('Pustakawan'));
 router.get('/:id', showLibrarian);
 router.post('/', fotoUpload, validate(createLibrarianSchema), createLibrarian);
 router.put('/:id', fotoUpload, validate(updateLibrarianSchema), updateLibrarian);
