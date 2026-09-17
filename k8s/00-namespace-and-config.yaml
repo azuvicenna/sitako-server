@@ -16,6 +16,7 @@ data:
   APP_URL: "http://sitako.local"
   ALLOWED_ORIGIN: "*"
   LOG_LEVEL: "info"
+  COOKIE_SECURE: "false"
 
   # Database host & port (sesuai nama Service K3s di 01-postgres.yaml)
   POSTGRES_HOST: "database"

@@ -36,16 +36,20 @@
       tags: ['docker']
 
     - role: sitako
-      tags: ['sitako', 'deploy']
+      tags: ['sitako', 'deploy', 'backend']
+
+    - role: sitako-web
+      tags: ['sitako-web', 'deploy', 'frontend']
 
   post_tasks:
     - name: Menampilkan ringkasan status deployment
       ansible.builtin.debug:
         msg:
           - "======================================================"
-          - "SITAKO Backend berhasil dideploy!"
+          - "SITAKO Services berhasil dideploy!"
           - "Server Host      : {{ ansible_host }}"
+          - "Frontend Web URL : http://{{ ansible_host }}:{{ web_port }}"
           - "Load Balancer URL: http://{{ ansible_host }}:{{ lb_port }}"
           - "Prometheus UI    : http://{{ ansible_host }}:{{ prometheus_port }}"
-          - "Replica Count    : {{ replica_count }} replika"
+          - "Replica Count    : {{ replica_count }} replika backend"
           - "======================================================"

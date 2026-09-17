@@ -4,7 +4,13 @@ import { sendError, sendFail } from '@/utils/core/handler';
 
 export const verifyAuth = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies?.token;
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      authHeader && authHeader.startsWith('Bearer ')
+        ? authHeader.substring(7).trim()
+        : undefined;
+
+    const token = req.cookies?.token || bearerToken;
 
     if (typeof token !== 'string' || !token.trim()) {
       return sendFail(res, 401, 'Akses ditolak. Belum login.');

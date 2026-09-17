@@ -34,11 +34,15 @@ const hashCaptcha = (text: string): string => {
 export const getCaptcha = (_req: Request, res: Response) => {
   try {
     const captcha = svgCaptcha.create({ size: 5, noise: 2, color: true });
+    const hashedToken = hashCaptcha(captcha.text);
 
-    res.cookie('captcha_token', hashCaptcha(captcha.text), {
+    res.cookie('captcha_token', hashedToken, {
       ...COOKIE_OPTIONS,
       maxAge: CAPTCHA_MAX_AGE,
     });
+
+    res.setHeader('X-Captcha-Token', hashedToken);
+    res.setHeader('Access-Control-Expose-Headers', 'X-Captcha-Token');
 
     return res.type('image/svg+xml').status(200).send(captcha.data);
   } catch (error) {
@@ -49,7 +53,10 @@ export const getCaptcha = (_req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { identifier, password, captcha } = req.body ?? {};
-    const captchaToken = req.cookies?.captcha_token;
+    const headerCaptchaToken =
+      (req.headers['x-captcha-token'] as string | undefined) ||
+      (req.body?.captcha_token as string | undefined);
+    const captchaToken = req.cookies?.captcha_token || headerCaptchaToken;
 
     res.clearCookie('captcha_token', COOKIE_OPTIONS);
 
@@ -74,7 +81,14 @@ export const login = async (req: Request, res: Response) => {
       maxAge: TOKEN_MAX_AGE,
     });
 
-    return sendSuccess(res, { user: result.user }, 'Login sukses');
+    return sendSuccess(
+      res,
+      {
+        user: result.user,
+        token: result.token,
+      },
+      'Login sukses',
+    );
   } catch (error) {
     return sendError(res, error, 'login');
   }

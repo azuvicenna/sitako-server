@@ -10,6 +10,8 @@
 app_user: "ubuntu"
 app_group: "ubuntu"
 app_dir: "/opt/sitako"
+web_app_dir: "/opt/sitako-web"
+web_port: 3000
 swap_size_mb: 2048
 
 # Port yang dibuka pada firewall UFW
@@ -17,6 +19,7 @@ firewall_allowed_ports:
   - 22    # SSH
   - 80    # Nginx Load Balancer (HTTP)
   - 443   # HTTPS (opsional)
+  - 3000  # SITAKO Web frontend
   - 8080  # SITAKO App port direct
   - 9091  # Prometheus Monitoring Dashboard
 

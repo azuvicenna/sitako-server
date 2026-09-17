@@ -56,7 +56,8 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'npm test --if-present'
+                sh 'npm run test:unit --if-present'
+                sh 'npm run test:feature --if-present'
             }
         }
 

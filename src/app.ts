@@ -14,9 +14,37 @@ const app: Application = express();
 app.set('trust proxy', 1);
 app.use(metricsMiddleware);
 app.use(helmet());
+const allowedOriginsConfig = process.env.ALLOWED_ORIGIN;
+const parsedAllowedOrigins = allowedOriginsConfig
+  ? allowedOriginsConfig.split(',').map((origin) => origin.trim().replace(/\/$/, ''))
+  : [];
+
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGIN || true,
+    origin: (origin, callback) => {
+      // Izinkan request tanpa origin (seperti aplikasi mobile, curl, Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Jika ALLOWED_ORIGIN tidak diset atau berisi wildcard "*", refleksikan origin agar kompatibel dengan credentials: true
+      if (!allowedOriginsConfig || allowedOriginsConfig.trim() === '*') {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = origin.trim().replace(/\/$/, '');
+      if (parsedAllowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      // Izinkan akses jika origin berasal dari localhost atau IP private (berguna untuk VM Multipass / dev)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      logger.warn(`[CORS] Origin diblokir: ${origin}`);
+      return callback(new Error(`Origin ${origin} tidak diizinkan oleh kebijakan CORS`), false);
+    },
     credentials: true,
   }),
 );

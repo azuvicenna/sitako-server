@@ -1,0 +1,92 @@
+---
+# =============================================================================
+# Role: sitako-web
+# Task: Sinkronisasi file, build image, compose up, & verifikasi health SITAKO Web
+# =============================================================================
+
+- name: Pastikan direktori aplikasi SITAKO Web tersedia di server
+  ansible.builtin.file:
+    path: "{{ web_app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+# -----------------------------------------------------------------------------
+# Sinkronisasi File Proyek SITAKO Web ke Server
+# -----------------------------------------------------------------------------
+- name: Salin file konfigurasi utama SITAKO Web ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../sitako-web/{{ item }}"
+    dest: "{{ web_app_dir }}/{{ item }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  loop:
+    - "Dockerfile"
+    - "docker-compose.yml"
+    - "package.json"
+    - "package-lock.json"
+    - "nginx.conf"
+    - "vite.config.ts"
+    - "tsconfig.json"
+    - "tsconfig.app.json"
+    - "tsconfig.node.json"
+    - "index.html"
+    - ".env.example"
+
+- name: Siapkan file .env untuk SITAKO Web di server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../sitako-web/.env.example"
+    dest: "{{ web_app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+
+- name: Salin direktori source code (src) SITAKO Web ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../sitako-web/src"
+    dest: "{{ web_app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+    directory_mode: '0755'
+
+- name: Salin direktori public SITAKO Web ke server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../../sitako-web/public"
+    dest: "{{ web_app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+    directory_mode: '0755'
+
+# -----------------------------------------------------------------------------
+# Build Docker Image & Start Container SITAKO Web
+# -----------------------------------------------------------------------------
+- name: Build image Docker SITAKO Web di server
+  ansible.builtin.command:
+    cmd: docker compose build
+    chdir: "{{ web_app_dir }}"
+  become_user: "{{ app_user }}"
+  changed_when: true
+
+- name: Jalankan container SITAKO Web via Docker Compose
+  ansible.builtin.command:
+    cmd: docker compose up -d --remove-orphans
+    chdir: "{{ web_app_dir }}"
+  become_user: "{{ app_user }}"
+  changed_when: true
+
+# -----------------------------------------------------------------------------
+# Verifikasi & Health Check
+# -----------------------------------------------------------------------------
+- name: Tunggu hingga container SITAKO Web sehat (healthcheck /health)
+  ansible.builtin.uri:
+    url: "http://localhost:{{ web_port }}/health"
+    method: GET
+    status_code: 200
+  register: web_health_status
+  until: web_health_status.status == 200
+  retries: 15
+  delay: 3

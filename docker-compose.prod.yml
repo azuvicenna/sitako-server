@@ -149,6 +149,7 @@ services:
 
 networks:
   backend:
+    name: sitako-network
     driver: bridge
 
 volumes:
