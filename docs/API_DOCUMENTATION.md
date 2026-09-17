@@ -1245,7 +1245,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ### 6.1 Mendapatkan Daftar Pustakawan
 - **Method**: `GET`
 - **URL**: `/api/user/librarians/`
-- **Auth**: Wajib (Pustakawan)
+- **Auth**: Wajib (Pengguna terautentikasi: Pustakawan / Anggota untuk pemilihan petugas sirkulasi)
 - **Query Params**:
   | Parameter | Tipe Data | Wajib? | Default | Keterangan |
   | :--- | :--- | :--- | :--- | :--- |
