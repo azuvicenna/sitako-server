@@ -1,5 +1,5 @@
 # =============================================================================
-# Contoh File Inventory Ansible untuk SITAKO Backend
+# Contoh File Inventory Ansible untuk SITAKO Server
 # Jika menggunakan Terraform, file `inventory.ini` akan otomatis digenerate.
 # Jika menggunakan server manual (VPS / VM lokal), salin file ini menjadi `inventory.ini`:
 #   cp inventory.ini.example inventory.ini

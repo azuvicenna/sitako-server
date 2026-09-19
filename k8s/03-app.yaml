@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: sitako-backend:latest
+          image: sitako-server:latest
           imagePullPolicy: IfNotPresent # Cocok untuk image lokal yang di-load ke k3s via 'k3s ctr images import'
           ports:
             - containerPort: 8080
@@ -68,16 +68,19 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: sitako-backend-ingress
+  name: sitako-server-ingress
   namespace: sitako
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.entrypoints: web # Bawaan K3s (Traefik)
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false" # Khusus Minikube (Nginx Ingress)
 spec:
   ingressClassName: traefik # Traefik adalah default ingress controller di K3s
+  # ingressClassName: nginx # Nginx adalah default ingress controller di Minikube
   rules:
     - http:
         paths:
           - path: /api
+            # - path: / # Khusus jika ingin root path diakses langsung via Ingress Minikube
             pathType: Prefix
             backend:
               service:

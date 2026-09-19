@@ -9,7 +9,7 @@ metadata:
   name: sitako-config
   namespace: sitako
 data:
-  APP_NAME: "SITAKO-backend"
+  APP_NAME: "SITAKO-server"
   APP_ENV: "production"
   NODE_ENV: "production"
   PORT: "8080"

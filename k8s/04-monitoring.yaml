@@ -144,7 +144,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: local-path
+  storageClassName: local-path # Default storage class bawaan K3s
+  # storageClassName: standard # Storage class bawaan Minikube
   resources:
     requests:
       storage: 5Gi

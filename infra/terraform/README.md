@@ -1,6 +1,6 @@
-# Konfigurasi Terraform untuk SITAKO Backend
+# Konfigurasi Terraform untuk SITAKO Server
 
-Direktori ini berisi konfigurasi **Terraform (Infrastructure as Code)** untuk menyediakan infrastruktur server cloud (AWS) yang siap digunakan untuk menjalankan aplikasi **SITAKO Backend**.
+Direktori ini berisi konfigurasi **Terraform (Infrastructure as Code)** untuk menyediakan infrastruktur server cloud (AWS) yang siap digunakan untuk menjalankan aplikasi **SITAKO Server**.
 
 ---
 

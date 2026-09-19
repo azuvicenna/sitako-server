@@ -20,7 +20,7 @@ pipeline {
     }
 
     environment {
-        APP_NAME     = "sitako-backend"
+        APP_NAME     = "sitako-server"
         IMAGE_TAG    = "${APP_NAME}:${env.BUILD_NUMBER}"
         // Nama VM multipass tujuan deploy, sesuaikan dengan nama VM kamu
         VM_NAME      = "sitako-vm"

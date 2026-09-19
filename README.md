@@ -1,8 +1,8 @@
-# SITAKO Backend
+# SITAKO Server
 
 ## Deskripsi Proyek
 
-SITAKO (Sistem Informasi Perpustakaan Sekolah) Backend adalah service API utama yang menangani logika bisnis, pengelolaan database, dan otentikasi untuk aplikasi perpustakaan sekolah. Proyek ini dirancang agar scalable dan mudah di-deploy menggunakan sistem container.
+SITAKO (Sistem Informasi Perpustakaan Sekolah) Server adalah service API utama yang menangani logika bisnis, pengelolaan database, dan otentikasi untuk aplikasi perpustakaan sekolah. Proyek ini dirancang agar scalable dan mudah di-deploy menggunakan sistem container.
 
 ## Teknologi Utama
 
@@ -198,13 +198,95 @@ Akses layanan pendukung:
 - **Application Metrics**: `http://localhost:8080/metrics`
 - **Health Check Endpoint**: `http://localhost:8080/`
 
-### Deployment ke Kubernetes (K3s)
+### Deployment ke Kubernetes
 
-Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster K3s (misalnya di VM Multipass):
+Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster Kubernetes, baik untuk pengujian lokal di laptop menggunakan **Minikube** maupun di server/VM menggunakan **K3s**.
+
+#### 1. Menjalankan di Minikube (Lokal di Laptop)
+
+Mode ini direkomendasikan untuk pengembangan dan pengujian Kubernetes secara langsung di laptop (Windows/macOS/Linux) menggunakan driver Docker:
+
+1. **Nyalakan Minikube Cluster & Aktifkan Ingress:**
+   ```bash
+   minikube start --driver=docker
+   minikube addons enable ingress
+   ```
+
+2. **Build Image Backend & Load ke Minikube:**
+   ```bash
+   docker build -t sitako-server:latest .
+   minikube image load sitako-server:latest
+   ```
+   *(Tips: Anda juga bisa me-load image base PostgreSQL jika koneksi lambat: `minikube image load postgres:18-alpine`)*
+
+3. **Deploy Seluruh Manifest (Namespace, Config, Postgres, Redis, App, Monitoring):**
+   ```bash
+   kubectl apply -f k8s/00-namespace-and-config.yaml
+   kubectl apply -f k8s/01-postgres.yaml
+   kubectl apply -f k8s/02-redis.yaml
+   kubectl apply -f k8s/03-app.yaml
+   kubectl apply -f k8s/04-monitoring.yaml
+   ```
+
+4. **Eksekusi Migrasi Database & Seeder Akun Awal di Pod:**
+   ```bash
+   kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
+   kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:seed:prod
+   ```
+
+5. **Mengecek Status Seluruh Resource:**
+   ```bash
+   kubectl get pods,pvc,svc,ingress -n sitako
+   ```
+
+6. **Mengakses Aplikasi di Laptop:**
+   - **Metode Praktis (Port Forward Service):**
+     ```bash
+     minikube service app -n sitako
+     ```
+     *(Perintah ini akan membuat tunnel dan otomatis membuka browser ke URL aplikasi)*.
+   - **Metode Ingress (Port 80):**
+     ```bash
+     minikube tunnel
+     ```
+     *(Setelah tunnel aktif di satu terminal, akses langsung via `http://localhost/` di browser)*.
+
+7. **Mengakses Dashboard Monitoring Prometheus:**
+   - **Metode Praktis (Otomatis Buka Browser):**
+     ```bash
+     minikube service prometheus -n sitako
+     ```
+   - **Metode Port Tetap (`9091`):**
+     ```bash
+     kubectl port-forward svc/prometheus 9091:9091 -n sitako
+     ```
+     *(Buka di browser: `http://localhost:9091/`)*
+
+8. **Perintah Perawatan / Utility Minikube:**
+   - Membuka antarmuka grafis Web Dashboard:
+     ```bash
+     minikube dashboard
+     ```
+   - Menghentikan cluster saat laptop selesai digunakan:
+     ```bash
+     minikube stop
+     ```
+   - Menyalakan kembali cluster yang di-stop (data PVC tetap aman):
+     ```bash
+     minikube start
+     ```
+   - Menghapus cluster jika ingin reset dari awal:
+     ```bash
+     minikube delete
+     ```
+
+#### 2. Menjalankan di K3s (Server Linux / VM Multipass)
+
+Untuk deployment di lingkungan K3s (misalnya di Virtual Machine Multipass):
 
 1. **Import Docker Image ke Runtime Containerd K3s:**
    ```bash
-   sudo k3s ctr -n k8s.io images import sitako-backend.tar
+   sudo k3s ctr -n k8s.io images import sitako-server.tar
    ```
 2. **Deploy Manifests (Namespace, Postgres, Redis, App, Monitoring):**
    ```bash

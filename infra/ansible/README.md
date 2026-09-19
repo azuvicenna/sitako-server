@@ -1,6 +1,6 @@
-# Konfigurasi Ansible untuk SITAKO Backend
+# Konfigurasi Ansible untuk SITAKO Server
 
-Direktori ini berisi konfigurasi **Ansible (Configuration Management & Deployment)** untuk mengotomatisasi setup server dari keadaan awal (*fresh server*) hingga aplikasi **SITAKO Backend** (Node.js/Express, multi-replica container, Nginx Load Balancer, PostgreSQL, Redis, Prometheus) berjalan dan siap melayani trafik.
+Direktori ini berisi konfigurasi **Ansible (Configuration Management & Deployment)** untuk mengotomatisasi setup server dari keadaan awal (*fresh server*) hingga aplikasi **SITAKO Server** (Node.js/Express, multi-replica container, Nginx Load Balancer, PostgreSQL, Redis, Prometheus) berjalan dan siap melayani trafik.
 
 ---
 

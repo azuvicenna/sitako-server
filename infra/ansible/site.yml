@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# Playbook Utama: SITAKO Backend Provisioning & Deployment
+# Playbook Utama: SITAKO Server Provisioning & Deployment
 #
 # Cara Menjalankan:
 #   ansible-playbook site.yml
@@ -15,7 +15,7 @@
 #   ansible-playbook site.yml --tags deploy
 # =============================================================================
 
-- name: Provisioning Server dan Deployment SITAKO Backend
+- name: Provisioning Server dan Deployment SITAKO Server
   hosts: sitako_servers
   become: true
   gather_facts: true

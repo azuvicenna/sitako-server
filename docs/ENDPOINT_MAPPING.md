@@ -1,4 +1,4 @@
-# Dokumentasi Alur Endpoints dan Arsitektur (Sitako Backend)
+# Dokumentasi Alur Endpoints dan Arsitektur (Sitako Server)
 
 Dokumen ini dibuat untuk membantu programmer baru atau anggota tim lain memahami alur arsitektur proyek ini. Proyek ini menggunakan arsitektur berlapis (layered architecture) yang memisahkan tanggung jawab antara *Routing*, *Controller*, *Service*, dan *Repository*.
 

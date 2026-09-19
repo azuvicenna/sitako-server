@@ -83,7 +83,7 @@
 # -----------------------------------------------------------------------------
 # Build Docker Image & Start Containers
 # -----------------------------------------------------------------------------
-- name: Build image Docker SITAKO Backend di server
+- name: Build image Docker SITAKO Server di server
   ansible.builtin.command:
     cmd: docker compose -f docker-compose.prod.yml build
     chdir: "{{ app_dir }}"

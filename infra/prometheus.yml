@@ -11,7 +11,7 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9091"]
 
-  # App SITAKO-backend (Express + prom-client di endpoint /metrics)
+  # App SITAKO-server (Express + prom-client di endpoint /metrics)
   - job_name: "sitako-app"
     metrics_path: /metrics
     static_configs:

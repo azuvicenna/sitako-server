@@ -1,5 +1,5 @@
 # =============================================================================
-# Contoh Konfigurasi Variabel Terraform untuk SITAKO Backend
+# Contoh Konfigurasi Variabel Terraform untuk SITAKO Server
 # Salin file ini menjadi `terraform.tfvars` dan sesuaikan nilainya:
 #   cp terraform.tfvars.example terraform.tfvars
 # =============================================================================

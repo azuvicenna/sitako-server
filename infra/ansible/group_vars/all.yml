@@ -1,6 +1,6 @@
 ---
 # =============================================================================
-# Variabel Global Ansible untuk SITAKO Backend
+# Variabel Global Ansible untuk SITAKO Server
 # Sesuaikan nilai variabel ini sebelum menjalankan playbook deployment.
 # =============================================================================
 
@@ -38,7 +38,7 @@ run_seed: false
 # -----------------------------------------------------------------------------
 # Environment Variables Aplikasi SITAKO (.env)
 # -----------------------------------------------------------------------------
-app_name: "SITAKO-backend"
+app_name: "SITAKO-server"
 app_env: "production"
 node_env: "production"
 app_port: 8080

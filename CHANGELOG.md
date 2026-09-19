@@ -127,7 +127,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
-- Menginisialisasi proyek SITAKO Backend menggunakan Express dan TypeScript
+- Menginisialisasi proyek SITAKO Server menggunakan Express dan TypeScript
 - Menyiapkan Docker Compose dan Dockerfile
 - Menyiapkan konfigurasi environment variable (`.env`)
 - Menyiapkan Jenkinsfile untuk CI/CD

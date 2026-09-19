@@ -101,7 +101,7 @@ resource "aws_security_group" "sitako_sg" {
     cidr_blocks = var.allowed_http_cidr
   }
 
-  # SITAKO Backend App Port (Direct access / Fallback)
+  # SITAKO Server App Port (Direct access / Fallback)
   ingress {
     description = "SITAKO App Direct Port"
     from_port   = 8080

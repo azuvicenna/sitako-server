@@ -14,7 +14,7 @@ output "ssh_command" {
 }
 
 output "application_url" {
-  description = "URL akses publik SITAKO Backend melalui Nginx Load Balancer"
+  description = "URL akses publik SITAKO Server melalui Nginx Load Balancer"
   value       = "http://${aws_eip.sitako_eip.public_ip}"
 }
 
