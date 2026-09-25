@@ -545,31 +545,29 @@ pipeline {
 
                     $multipass = $env:MULTIPASS_BIN
 
-                    Write-Host "Health check dari dalam VM..."
+                    Write-Host "Health check aplikasi di dalam VM..."
 
-                    & $multipass exec $env:VM_NAME -- bash -lc '
-                        for i in $(seq 1 12); do
-                            if curl -fsS --max-time 5 http://127.0.0.1:8080/ > /dev/null; then
-                                echo "Health check berhasil."
-                                exit 0
-                            fi
+                    $success = $false
 
-                            echo "Percobaan $i/12 belum berhasil."
+                    for ($i = 1; $i -le 12; $i++) {
+                        & $multipass exec $env:VM_NAME -- curl -fsS --max-time 5 http://127.0.0.1:8080/
 
-                            if [ "$i" -lt 12 ]; then
-                                sleep 5
-                            fi
-                        done
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Host "Health check berhasil."
+                            $success = $true
+                            break
+                        }
 
-                        echo "Health check gagal setelah 12 percobaan."
-                        exit 1
-                    '
+                        Write-Host "Percobaan $i/12 belum berhasil."
 
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "Health check aplikasi gagal."
+                        if ($i -lt 12) {
+                            Start-Sleep -Seconds 5
+                        }
                     }
 
-                    Write-Host "Health check berhasil."
+                    if (-not $success) {
+                        throw "Health check aplikasi gagal setelah 12 percobaan."
+                    }
                 '''
             }
         }
