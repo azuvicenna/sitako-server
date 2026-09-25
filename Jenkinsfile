@@ -292,7 +292,7 @@ pipeline {
                         Write-Host "Starting database & supporting services..."
 
                         & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Start service pendukung gagal."
@@ -332,6 +332,15 @@ pipeline {
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Start app gagal."
+                        }
+
+                        Write-Host "Starting prometheus..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans prometheus"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Start prometheus gagal."
                         }
                     '''
                 }
@@ -406,7 +415,7 @@ pipeline {
                         Write-Host "Starting database & supporting services..."
 
                         & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Start service pendukung gagal."
