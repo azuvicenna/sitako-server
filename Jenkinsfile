@@ -540,72 +540,37 @@ pipeline {
 
         stage('Health Check') {
             steps {
-                script {
-                    def vmIp = powershell(
-                        script: '''
-                            $ErrorActionPreference = 'Stop'
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
 
-                            $output = & $env:MULTIPASS_BIN info $env:VM_NAME
+                    $multipass = $env:MULTIPASS_BIN
 
-                            if ($LASTEXITCODE -ne 0) {
-                                throw "Gagal mendapatkan info VM."
-                            }
+                    Write-Host "Health check dari dalam VM..."
 
-                            $line = $output | Select-String '^IPv4:'
+                    & $multipass exec $env:VM_NAME -- bash -lc '
+                        for i in $(seq 1 12); do
+                            if curl -fsS --max-time 5 http://127.0.0.1:8080/ > /dev/null; then
+                                echo "Health check berhasil."
+                                exit 0
+                            fi
 
-                            if (-not $line) {
-                                throw "IPv4 VM tidak ditemukan."
-                            }
+                            echo "Percobaan $i/12 belum berhasil."
 
-                            $rawIps = ($line.ToString() -replace '^IPv4:[ ]*', '').Trim()
-                            $ip = ($rawIps -split '\\s+')[0]
+                            if [ "$i" -lt 12 ]; then
+                                sleep 5
+                            fi
+                        done
 
-                            Write-Output $ip
-                        ''',
-                        returnStdout: true
-                    ).trim()
+                        echo "Health check gagal setelah 12 percobaan."
+                        exit 1
+                    '
 
-                    def targetUrl = params.DEPLOY_MODE == 'docker-standalone'
-                        ? "http://${vmIp}:8080/"
-                        : "http://${vmIp}/"
-
-                    echo "Memulai Health Check ke ${targetUrl}..."
-
-                    withEnv(["TARGET_URL=${targetUrl}"]) {
-                        powershell '''
-                            $ErrorActionPreference = 'Stop'
-
-                            $success =$false
-
-                            for ($i = 1; $i -le 12; $i++) {
-                                try {
-                                    $response = Invoke-WebRequest `
-                                        -Uri $env:TARGET_URL `
-                                        -UseBasicParsing `
-                                        -TimeoutSec 5 `
-                                        -ErrorAction Stop
-
-                                    if ($response.StatusCode -eq 200) {
-                                        Write-Host "Health check berhasil di $env:TARGET_URL"
-                                        $success =$true
-                                        break
-                                    }
-                                }
-                                catch {
-                                    Write-Host "Percobaan $i/12 belum berhasil."
-
-                                    if ($i -lt 12) {
-                                        Start-Sleep -Seconds 5
-                                    }
-                                }
-                            }
-
-                            if (-not $success) {
-                                throw "Health check gagal setelah 12 percobaan ke $env:TARGET_URL."
-                            }
-                        '''
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "Health check aplikasi gagal."
                     }
-                }
+
+                    Write-Host "Health check berhasil."
+                '''
             }
         }
     }
