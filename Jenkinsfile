@@ -20,12 +20,10 @@ pipeline {
     }
 
     environment {
-        APP_NAME     = "sitako-server"
-        IMAGE_TAG    = "${APP_NAME}:${env.BUILD_NUMBER}"
-        PATH         = "C:\\Program Files\\Multipass\\bin;${env.PATH}"
-        // Nama VM multipass tujuan deploy, sesuaikan dengan nama VM kamu
-        VM_NAME      = "sitako-vm"
-        VM_APP_DIR   = "/home/ubuntu/sitako"
+        APP_NAME      = "sitako-server"
+        IMAGE_TAG     = "${APP_NAME}:${env.BUILD_NUMBER}"
+        VM_NAME       = "sitako-vm"
+        VM_APP_DIR    = "/home/ubuntu/sitako"
         MULTIPASS_BIN = 'C:\\Program Files\\Multipass\\bin\\multipass.exe'
     }
 
@@ -72,9 +70,9 @@ pipeline {
         stage('Docker Build (in VM)') {
             steps {
                 powershell """
-                    & "$MULTIPASS_BIN" exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
-                    & "$MULTIPASS_BIN" transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
-                    & "$MULTIPASS_BIN" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
+                    & "${env.MULTIPASS_BIN}" transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
                 """
             }
         }
@@ -90,15 +88,15 @@ pipeline {
                 // Catatan: file .env harus sudah ada duluan di dalam VM (di VM_APP_DIR)
                 // karena docker-compose.yml butuh env_file: .env
                 powershell """
-                    multipass transfer docker-compose.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.yml
-                    multipass transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml up -d --remove-orphans"
+                    & "${env.MULTIPASS_BIN}" transfer docker-compose.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.yml
+                    & "${env.MULTIPASS_BIN}" transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml up -d --remove-orphans"
                 """
                 script {
                     if (params.RUN_MIGRATION) {
                         echo "Menjalankan migrasi database di mode standalone..."
                         powershell """
-                            multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
+                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
                         """
                     }
                 }
@@ -116,15 +114,15 @@ pipeline {
                 // Catatan: file .env harus sudah ada duluan di dalam VM (di VM_APP_DIR)
                 // docker-compose.prod.yml mengarahkan traffic melalui Nginx Load Balancer (port 80)
                 powershell """
-                    multipass transfer docker-compose.prod.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.prod.yml
-                    multipass transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml up -d --scale app=${params.REPLICA_COUNT ?: 2} --remove-orphans"
+                    & "${env.MULTIPASS_BIN}" transfer docker-compose.prod.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.prod.yml
+                    & "${env.MULTIPASS_BIN}" transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml up -d --scale app=${params.REPLICA_COUNT ?: 2} --remove-orphans"
                 """
                 script {
                     if (params.RUN_MIGRATION) {
                         echo "Menjalankan migrasi database di mode multi-replica..."
                         powershell """
-                            multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml exec -T app npm run db:migrate:prod"
+                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml exec -T app npm run db:migrate:prod"
                         """
                     }
                 }
@@ -140,16 +138,16 @@ pipeline {
             }
             steps {
                 powershell """
-                    multipass transfer -r k8s ${VM_NAME}:${VM_APP_DIR}/k8s
-                    multipass exec ${VM_NAME} -- bash -c "docker save ${APP_NAME}:latest -o ${VM_APP_DIR}/${APP_NAME}.tar"
-                    multipass exec ${VM_NAME} -- sudo k3s ctr -n k8s.io images import ${VM_APP_DIR}/${APP_NAME}.tar
-                    multipass exec ${VM_NAME} -- sudo bash -c "kubectl apply -f ${VM_APP_DIR}/k8s/00-namespace-and-config.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/01-postgres.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/02-redis.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/03-app.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/04-monitoring.yaml && kubectl rollout restart deploy/sitako-app -n sitako && kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
+                    & "${env.MULTIPASS_BIN}" transfer -r k8s ${VM_NAME}:${VM_APP_DIR}/k8s
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "docker save ${APP_NAME}:latest -o ${VM_APP_DIR}/${APP_NAME}.tar"
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo k3s ctr -n k8s.io images import ${VM_APP_DIR}/${APP_NAME}.tar
+                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo bash -c "kubectl apply -f ${VM_APP_DIR}/k8s/00-namespace-and-config.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/01-postgres.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/02-redis.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/03-app.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/04-monitoring.yaml && kubectl rollout restart deploy/sitako-app -n sitako && kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
                 """
                 script {
                     if (params.RUN_MIGRATION) {
                         echo "Menjalankan migrasi database di Pod K3s..."
                         powershell """
-                            multipass exec ${VM_NAME} -- sudo kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
+                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
                         """
                     }
                 }
@@ -159,7 +157,7 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    def vmIp = powershell(script: "((multipass info ${VM_NAME} | Select-String 'IPv4') -split '\\s+')[1]", returnStdout: true).trim()
+                    def vmIp = powershell(script: "((& '${env.MULTIPASS_BIN}' info ${VM_NAME} | Select-String 'IPv4') -split '\\s+')[1]", returnStdout: true).trim()
                     def mode = (params.DEPLOY_MODE ?: 'docker-standalone').toLowerCase()
                     def targetUrl = ""
 
@@ -206,7 +204,9 @@ pipeline {
             echo "Pipeline gagal pada mode ${params.DEPLOY_MODE ?: 'docker-standalone'}, cek log di atas."
         }
         always {
-            powershell "multipass exec ${VM_NAME} -- rm -rf ${VM_APP_DIR}/src ${VM_APP_DIR}/${APP_NAME}.tar"
+            powershell """
+                & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- rm -rf ${VM_APP_DIR}/src ${VM_APP_DIR}/${APP_NAME}.tar || exit 0
+            """
             cleanWs()
         }
     }
