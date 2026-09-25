@@ -557,11 +557,8 @@ pipeline {
                                 throw "IPv4 VM tidak ditemukan."
                             }
 
-                            $ip = ($line.ToString() -replace '^IPv4:[ ]*', '').Trim()
-
-                            if (-not $ip) {
-                                throw "IPv4 VM kosong."
-                            }
+                            $rawIps = ($line.ToString() -replace '^IPv4:[ ]*', '').Trim()
+                            $ip = ($rawIps -split '\s+')[0]
 
                             Write-Output $ip
                         ''',
