@@ -25,6 +25,7 @@ pipeline {
         // Nama VM multipass tujuan deploy, sesuaikan dengan nama VM kamu
         VM_NAME      = "sitako-vm"
         VM_APP_DIR   = "/home/ubuntu/sitako"
+        MULTIPASS_BIN = 'C:\\Program Files\\Multipass\\bin\\multipass.exe'
     }
 
     options {
@@ -70,9 +71,9 @@ pipeline {
         stage('Docker Build (in VM)') {
             steps {
                 powershell """
-                    multipass exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
-                    multipass transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
-                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
+                    & "$MULTIPASS_BIN" exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
+                    & "$MULTIPASS_BIN" transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
+                    & "$MULTIPASS_BIN" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
                 """
             }
         }
