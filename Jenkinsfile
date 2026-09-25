@@ -259,6 +259,11 @@ pipeline {
                             throw "Transfer docker-compose.yml gagal."
                         }
 
+                        Write-Host "Menghentikan app container lama (jika ada)..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml stop app 2>/dev/null; docker compose -f docker-compose.yml rm -f app 2>/dev/null; true"
+
                         & $multipass transfer `
                             -r infra `
                             "$($env:VM_NAME):$($env:VM_APP_DIR)/infra"
@@ -367,6 +372,11 @@ pipeline {
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer docker-compose.prod.yml gagal."
                         }
+
+                        Write-Host "Menghentikan app container lama (jika ada)..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml stop app 2>/dev/null; docker compose -f docker-compose.prod.yml rm -f app 2>/dev/null; true"
 
                         & $multipass transfer `
                             -r infra `
