@@ -545,13 +545,13 @@ pipeline {
                         script: '''
                             $ErrorActionPreference = 'Stop'
 
-                            $output = & $env:MULTIPASS_BIN info$env:VM_NAME
+                            $output = & $env:MULTIPASS_BIN info $env:VM_NAME
 
                             if ($LASTEXITCODE -ne 0) {
                                 throw "Gagal mendapatkan info VM."
                             }
 
-                            $line =$output | Select-String '^IPv4:'
+                            $line = $output | Select-String '^IPv4:'
 
                             if (-not $line) {
                                 throw "IPv4 VM tidak ditemukan."
