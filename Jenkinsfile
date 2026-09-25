@@ -158,7 +158,7 @@ pipeline {
                     $ErrorActionPreference = 'Stop'
 
                     $multipass =$env:MULTIPASS_BIN
-                    $stagingDir = Join-Path$env:WORKSPACE '..\sitako-deploy'
+                    $stagingDir = Join-Path (Split-Path$env:WORKSPACE -Parent) 'sitako-deploy'
 
                     Write-Host "Menyiapkan source untuk deployment..."
 
@@ -185,7 +185,7 @@ pipeline {
 
                     Write-Host "Membersihkan source lama di VM..."
 
-                    & $multipass exec $env:VM_NAME -- bash -lc `
+                    & $multipass exec$env:VM_NAME -- bash -lc `
                         "rm -rf '$env:VM_APP_DIR/src' && mkdir -p '$env:VM_APP_DIR/src'"
 
                     if ($LASTEXITCODE -ne 0) {
@@ -204,8 +204,8 @@ pipeline {
 
                     Write-Host "Building Docker image di VM..."
 
-                    & $multipass exec $env:VM_NAME -- bash -lc `
-                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME:latest' ."
+                    & $multipass exec$env:VM_NAME -- bash -lc `
+                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME`:latest' ."
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Docker build gagal."
