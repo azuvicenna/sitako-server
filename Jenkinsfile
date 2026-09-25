@@ -26,10 +26,11 @@ pipeline {
         IMAGE_TAG = "${APP_NAME}:${BUILD_NUMBER}"
         VM_NAME = 'sitako-vm'
         VM_APP_DIR = '/home/ubuntu/sitako'
-        MULTIPASS_BIN = 'C:\\Program Files\\Multipass\\bin\\multipass.exe'
+        MULTIPASS_BIN = 'C:/Program Files/Multipass/bin/multipass.exe'
     }
 
     options {
+        skipDefaultCheckout(true)
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timeout(time: 20, unit: 'MINUTES')
         timestamps()
@@ -47,7 +48,7 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        $multipass =$env:MULTIPASS_BIN
+                        $multipass = $env:MULTIPASS_BIN
 
                         if (-not (Test-Path -LiteralPath $multipass)) {
                             throw "Multipass tidak ditemukan: $multipass"
@@ -72,7 +73,7 @@ pipeline {
 
                         Write-Host "Memeriksa VM..."
 
-                        & $multipass info$env:VM_NAME
+                        & $multipass info $env:VM_NAME
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "VM '$env:VM_NAME' tidak dapat diakses."
@@ -157,8 +158,14 @@ pipeline {
                 powershell '''
                     $ErrorActionPreference = 'Stop'
 
-                    $multipass =$env:MULTIPASS_BIN
-                    $stagingDir = Join-Path (Split-Path$env:WORKSPACE -Parent) 'sitako-deploy'
+                    $multipass = $env:MULTIPASS_BIN
+                    $parentDir = Split-Path $env:WORKSPACE -Parent
+                    $stagingDir = Join-Path $parentDir 'sitako-deploy'
+                    $stagingSource = Join-Path $stagingDir '.'
+
+                    $nodeModulesDir = Join-Path $env:WORKSPACE 'node_modules'
+                    $gitDir = Join-Path $env:WORKSPACE '.git'
+                    $coverageDir = Join-Path $env:WORKSPACE 'coverage'
 
                     Write-Host "Menyiapkan source untuk deployment..."
 
@@ -173,9 +180,9 @@ pipeline {
                         $stagingDir `
                         /E `
                         /XD `
-                            "$env:WORKSPACE\node_modules" `
-                            "$env:WORKSPACE\.git" `
-                            "$env:WORKSPACE\coverage" `
+                            $nodeModulesDir `
+                            $gitDir `
+                            $coverageDir `
                         /XF `
                             "Jenkinsfile"
 
@@ -185,7 +192,7 @@ pipeline {
 
                     Write-Host "Membersihkan source lama di VM..."
 
-                    & $multipass exec$env:VM_NAME -- bash -lc `
+                    & $multipass exec $env:VM_NAME -- bash -lc `
                         "rm -rf '$env:VM_APP_DIR/src' && mkdir -p '$env:VM_APP_DIR/src'"
 
                     if ($LASTEXITCODE -ne 0) {
@@ -195,8 +202,8 @@ pipeline {
                     Write-Host "Transfer source code ke VM..."
 
                     & $multipass transfer `
-                        -r "$stagingDir\." `
-                        "$env:VM_NAME`:$env:VM_APP_DIR/src"
+                        -r $stagingSource `
+                        "$($env:VM_NAME):$($env:VM_APP_DIR)/src"
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Transfer source ke VM gagal."
@@ -204,11 +211,19 @@ pipeline {
 
                     Write-Host "Building Docker image di VM..."
 
-                    & $multipass exec$env:VM_NAME -- bash -lc `
-                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME`:latest' ."
+                    & $multipass exec $env:VM_NAME -- bash -lc `
+                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$($env:APP_NAME):latest' ."
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Docker build gagal."
+                    }
+
+                    Write-Host "Membersihkan staging directory..."
+
+                    Remove-Item -LiteralPath $stagingDir -Recurse -Force
+
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Warning "Gagal membersihkan staging directory."
                     }
                 '''
             }
@@ -231,13 +246,13 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        $multipass =$env:MULTIPASS_BIN
+                        $multipass = $env:MULTIPASS_BIN
 
                         Write-Host "Transfer konfigurasi Docker Standalone..."
 
                         & $multipass transfer `
                             docker-compose.yml `
-                            "$env:VM_NAME`:$env:VM_APP_DIR/docker-compose.yml"
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.yml"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer docker-compose.yml gagal."
@@ -245,7 +260,7 @@ pipeline {
 
                         & $multipass transfer `
                             -r infra `
-                            "$env:VM_NAME`:$env:VM_APP_DIR/infra"
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/infra"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer infra gagal."
@@ -253,15 +268,19 @@ pipeline {
 
                         Write-Host "Menyiapkan .env..."
 
-                        $encodedEnv = [Convert]::ToBase64String(
-                            [Text.Encoding]::UTF8.GetBytes($env:SITAKO_ENV)
-                        )
-
-                        & $multipass exec$env:VM_NAME -- bash -lc `
-                            "echo '$encodedEnv' | base64 -d > '$env:VM_APP_DIR/.env' && chmod 600 '$env:VM_APP_DIR/.env'"
+                        $env:SITAKO_ENV | & $multipass transfer `
+                            - `
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/.env"
 
                         if ($LASTEXITCODE -ne 0) {
-                            throw "Gagal membuat .env di VM."
+                            throw "Gagal mentransfer .env ke VM."
+                        }
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "chmod 600 '$env:VM_APP_DIR/.env'"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Gagal mengatur permission .env."
                         }
 
                         Write-Host "Deploying Standalone container..."
@@ -273,24 +292,24 @@ pipeline {
                             throw "Deploy Standalone gagal."
                         }
                     '''
-                }
 
-                script {
-                    if (params.RUN_MIGRATION) {
-                        echo 'Menjalankan migrasi database (Standalone)...'
+                    script {
+                        if (params.RUN_MIGRATION) {
+                            echo 'Menjalankan migrasi database (Standalone)...'
 
-                        powershell '''
-                            $ErrorActionPreference = 'Stop'
+                            powershell '''
+                                $ErrorActionPreference = 'Stop'
 
-                            $multipass =$env:MULTIPASS_BIN
+                                $multipass = $env:MULTIPASS_BIN
 
-                            & $multipass exec$env:VM_NAME -- bash -lc `
-                                "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
+                                & $multipass exec $env:VM_NAME -- bash -lc `
+                                    "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
 
-                            if ($LASTEXITCODE -ne 0) {
-                                throw "Migrasi database gagal."
-                            }
-                        '''
+                                if ($LASTEXITCODE -ne 0) {
+                                    throw "Migrasi database gagal."
+                                }
+                            '''
+                        }
                     }
                 }
             }
@@ -325,7 +344,7 @@ pipeline {
 
                         & $multipass transfer `
                             docker-compose.prod.yml `
-                            "$env:VM_NAME`:$env:VM_APP_DIR/docker-compose.prod.yml"
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.prod.yml"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer docker-compose.prod.yml gagal."
@@ -333,7 +352,7 @@ pipeline {
 
                         & $multipass transfer `
                             -r infra `
-                            "$env:VM_NAME`:$env:VM_APP_DIR/infra"
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/infra"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer infra gagal."
@@ -341,20 +360,24 @@ pipeline {
 
                         Write-Host "Menyiapkan .env..."
 
-                        $encodedEnv = [Convert]::ToBase64String(
-                            [Text.Encoding]::UTF8.GetBytes($env:SITAKO_ENV)
-                        )
-
-                        & $multipass exec $env:VM_NAME -- bash -lc `
-                            "echo '$encodedEnv' | base64 -d > '$env:VM_APP_DIR/.env' && chmod 600 '$env:VM_APP_DIR/.env'"
+                        $env:SITAKO_ENV | & $multipass transfer `
+                            - `
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/.env"
 
                         if ($LASTEXITCODE -ne 0) {
-                            throw "Gagal membuat .env di VM."
+                            throw "Gagal mentransfer .env ke VM."
+                        }
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "chmod 600 '$env:VM_APP_DIR/.env'"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Gagal mengatur permission .env."
                         }
 
                         Write-Host "Deploying Multi-Replica containers..."
 
-                        & $multipass exec$env:VM_NAME -- bash -lc `
+                        & $multipass exec $env:VM_NAME -- bash -lc `
                             "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -395,13 +418,13 @@ pipeline {
                 powershell '''
                     $ErrorActionPreference = 'Stop'
 
-                    $multipass =$env:MULTIPASS_BIN
+                    $multipass = $env:MULTIPASS_BIN
 
                     Write-Host "Transfer Kubernetes manifests..."
 
                     & $multipass transfer `
                         -r k8s `
-                        "$env:VM_NAME`:$env:VM_APP_DIR/k8s"
+                        "$($env:VM_NAME):$($env:VM_APP_DIR)/k8s"
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Transfer manifest K3s gagal."
@@ -410,7 +433,7 @@ pipeline {
                     Write-Host "Export & Import Docker Image ke K3s..."
 
                     & $multipass exec $env:VM_NAME -- bash -lc `
-                        "docker save '$env:APP_NAME:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
+                        "docker save '$($env:APP_NAME):latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Import image ke K3s gagal."
@@ -418,7 +441,7 @@ pipeline {
 
                     Write-Host "Applying Kubernetes Manifests..."
 
-                    & $multipass exec$env:VM_NAME -- bash -lc `
+                    & $multipass exec $env:VM_NAME -- bash -lc `
                         "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s'"
 
                     if ($LASTEXITCODE -ne 0) {
@@ -442,9 +465,9 @@ pipeline {
                         powershell '''
                             $ErrorActionPreference = 'Stop'
 
-                            $multipass =$env:MULTIPASS_BIN
+                            $multipass = $env:MULTIPASS_BIN
 
-                            & $multipass exec$env:VM_NAME -- sudo k3s kubectl exec `
+                            & $multipass exec $env:VM_NAME -- sudo k3s kubectl exec `
                                 -n sitako `
                                 deploy/sitako-app `
                                 -c backend `
@@ -466,19 +489,19 @@ pipeline {
                         script: '''
                             $ErrorActionPreference = 'Stop'
 
-                            $output = & $env:MULTIPASS_BIN info$env:VM_NAME
+                            $output = & $env:MULTIPASS_BIN info $env:VM_NAME
 
                             if ($LASTEXITCODE -ne 0) {
                                 throw "Gagal mendapatkan info VM."
                             }
 
-                            $line =$output | Select-String '^IPv4:'
+                            $line = $output | Select-String '^IPv4:'
 
                             if (-not $line) {
                                 throw "IPv4 VM tidak ditemukan."
                             }
 
-                            $ip = ($line.ToString() -replace '^IPv4:\\s*', '').Trim()
+                            $ip = ($line.ToString() -replace '^IPv4:[ ]*', '').Trim()
 
                             if (-not $ip) {
                                 throw "IPv4 VM kosong."
@@ -499,7 +522,7 @@ pipeline {
                         powershell '''
                             $ErrorActionPreference = 'Stop'
 
-                            $success =$false
+                            $success = $false
 
                             for ($i = 1; $i -le 12; $i++) {
                                 try {
@@ -511,7 +534,7 @@ pipeline {
 
                                     if ($response.StatusCode -eq 200) {
                                         Write-Host "Health check berhasil di $env:TARGET_URL"
-                                        $success =$true
+                                        $success = $true
                                         break
                                     }
                                 }
