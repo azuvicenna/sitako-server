@@ -22,6 +22,7 @@ pipeline {
     environment {
         APP_NAME     = "sitako-server"
         IMAGE_TAG    = "${APP_NAME}:${env.BUILD_NUMBER}"
+        PATH         = "C:\\Program Files\\Multipass\\bin;${env.PATH}"
         // Nama VM multipass tujuan deploy, sesuaikan dengan nama VM kamu
         VM_NAME      = "sitako-vm"
         VM_APP_DIR   = "/home/ubuntu/sitako"
