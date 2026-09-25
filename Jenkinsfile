@@ -69,8 +69,10 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                powershell "docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
-                powershell "docker save ${APP_NAME}:latest -o ${APP_NAME}.tar"
+                powershell """
+                    multipass transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
+                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${APP_NAME}:latest ."
+                """
             }
         }
 
