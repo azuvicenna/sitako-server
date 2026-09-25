@@ -476,21 +476,7 @@ if (-not $success) {
         }
 
         always {
-            powershell '''
-$ErrorActionPreference = 'Continue'
-
-$multipass = $env:MULTIPASS_BIN
-
-if (Test-Path -LiteralPath $multipass) {
-    & $multipass exec $env:VM_NAME -- rm -rf `
-        "$env:VM_APP_DIR/src" `
-        "$env:VM_APP_DIR/$env:APP_NAME.tar"
-}
-
-exit 0
-'''
-
-            cleanWs()
+            deleteDir()
         }
     }
 }
