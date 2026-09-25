@@ -5,25 +5,27 @@ pipeline {
         choice(
             name: 'DEPLOY_MODE',
             choices: ['docker-standalone', 'docker-multi-replica', 'k3s'],
-            description: 'Pilih mode deployment: Standalone (docker-compose.yml), Multi-Replica (docker-compose.prod.yml), atau K3s (Kubernetes manifests)'
+            description: 'Pilih mode deployment: Standalone, Multi-Replica, atau K3s'
         )
+
         string(
             name: 'REPLICA_COUNT',
             defaultValue: '2',
-            description: 'Jumlah replika backend app (hanya berlaku untuk mode docker-multi-replica)'
+            description: 'Jumlah replika backend app (berlaku untuk docker-multi-replica)'
         )
+
         booleanParam(
             name: 'RUN_MIGRATION',
             defaultValue: true,
-            description: 'Jalankan migrasi database otomatis (npm run db:migrate:prod) setelah deploy'
+            description: 'Jalankan migrasi database otomatis setelah deploy'
         )
     }
 
     environment {
-        APP_NAME      = "sitako-server"
-        IMAGE_TAG     = "${APP_NAME}:${env.BUILD_NUMBER}"
-        VM_NAME       = "sitako-vm"
-        VM_APP_DIR    = "/home/ubuntu/sitako"
+        APP_NAME = 'sitako-server'
+        IMAGE_TAG = "${APP_NAME}:${BUILD_NUMBER}"
+        VM_NAME = 'sitako-vm'
+        VM_APP_DIR = '/home/ubuntu/sitako'
         MULTIPASS_BIN = 'C:\\Program Files\\Multipass\\bin\\multipass.exe'
     }
 
@@ -34,6 +36,40 @@ pipeline {
     }
 
     stages {
+        stage('Verify Multipass') {
+            steps {
+                withCredentials([string(credentialsId: 'multipass-passphrase', variable: 'MULTIPASS_PASSPHRASE')]) {
+                    powershell '''
+                        $ErrorActionPreference = 'Stop'
+                        $multipass =$env:MULTIPASS_BIN
+
+                        if (-not (Test-Path -LiteralPath $multipass)) {
+                            throw "Multipass tidak ditemukan: $multipass"
+                        }
+
+                        & $multipass version
+                        if ($LASTEXITCODE -ne 0) { throw "Multipass CLI gagal dijalankan." }
+
+                        $listOutput = &$multipass list 2>&1
+                        if ($LASTEXITCODE -ne 0) {
+                            $listText =$listOutput | Out-String
+                            if ($listText -match 'not authenticated with the Multipass service') {
+                                Write-Host "Authenticating Multipass client..."
+                                & $multipass authenticate "$env:MULTIPASS_PASSPHRASE"
+                                if ($LASTEXITCODE -ne 0) { throw "Autentikasi Multipass gagal." }
+                            } else {
+                                throw "Multipass error: $listText"
+                            }
+                        }
+
+                        & $multipass info "$env:VM_NAME"
+                        if ($LASTEXITCODE -ne 0) { throw "VM '$env:VM_NAME' tidak tersedia." }
+
+                        Write-Host "Multipass siap digunakan."
+                    '''
+                }
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -43,61 +79,94 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                powershell 'npm ci'
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    npm ci
+                    if ($LASTEXITCODE -ne 0) { throw "npm ci gagal." }
+                '''
             }
         }
 
         stage('Lint') {
             steps {
-                // --if-present: otomatis skip kalau script "lint" belum ada di package.json
-                powershell 'npm run lint --if-present'
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    npm run lint --if-present
+                    if ($LASTEXITCODE -ne 0) { throw "Lint gagal." }
+                '''
             }
         }
 
         stage('Test') {
             steps {
-                powershell 'npm run test:unit --if-present'
-                powershell 'npm run test:feature --if-present'
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    npm run test:unit --if-present
+                    if ($LASTEXITCODE -ne 0) { throw "Unit test gagal." }
+
+                    npm run test:feature --if-present
+                    if ($LASTEXITCODE -ne 0) { throw "Feature test gagal." }
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                powershell 'npm run build'
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    npm run build
+                    if ($LASTEXITCODE -ne 0) { throw "Build aplikasi gagal." }
+                '''
             }
         }
 
         stage('Docker Build (in VM)') {
             steps {
-                powershell """
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
-                    & "${env.MULTIPASS_BIN}" transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
-                """
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    $multipass =$env:MULTIPASS_BIN
+
+                    Write-Host "Menyiapkan direktori aplikasi di VM..."
+                    & $multipass exec$env:VM_NAME -- bash -lc "mkdir -p '$env:VM_APP_DIR' && rm -rf '$env:VM_APP_DIR/src'"
+                    if ($LASTEXITCODE -ne 0) { throw "Gagal menyiapkan direktori aplikasi di VM." }
+
+                    Write-Host "Transfer source code ke VM..."
+                    & $multipass transfer -r . "$env:VM_NAME`:$env:VM_APP_DIR/src"
+                    if ($LASTEXITCODE -ne 0) { throw "Transfer source ke VM gagal." }
+
+                    Write-Host "Building Docker image di VM..."
+                    & $multipass exec $env:VM_NAME -- bash -lc "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME`:latest' ."
+                    if ($LASTEXITCODE -ne 0) { throw "Docker build gagal." }
+                '''
             }
         }
 
         stage('Deploy (Docker Standalone)') {
             when {
-                expression {
-                    def mode = (params.DEPLOY_MODE ?: 'docker-standalone').toLowerCase()
-                    return mode.contains('standalone')
-                }
+                expression { params.DEPLOY_MODE == 'docker-standalone' }
             }
             steps {
-                // Catatan: file .env harus sudah ada duluan di dalam VM (di VM_APP_DIR)
-                // karena docker-compose.yml butuh env_file: .env
-                powershell """
-                    & "${env.MULTIPASS_BIN}" transfer docker-compose.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.yml
-                    & "${env.MULTIPASS_BIN}" transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml up -d --remove-orphans"
-                """
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    $multipass =$env:MULTIPASS_BIN
+
+                    Write-Host "Transfer konfigurasi Docker Standalone..."
+                    & $multipass transfer docker-compose.yml "$env:VM_NAME`:$env:VM_APP_DIR/docker-compose.yml"
+                    & $multipass transfer -r infra "$env:VM_NAME`:$env:VM_APP_DIR/infra"
+                    if ($LASTEXITCODE -ne 0) { throw "Transfer file konfigurasi gagal." }
+
+                    Write-Host "Deploying Standalone container..."
+                    & $multipass exec $env:VM_NAME -- bash -lc "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans"
+                    if ($LASTEXITCODE -ne 0) { throw "Deploy Standalone gagal." }
+                '''
                 script {
                     if (params.RUN_MIGRATION) {
-                        echo "Menjalankan migrasi database di mode standalone..."
-                        powershell """
-                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
-                        """
+                        echo 'Menjalankan migrasi database (Standalone)...'
+                        powershell '''
+                            $ErrorActionPreference = 'Stop'
+                            & $env:MULTIPASS_BIN exec $env:VM_NAME -- bash -lc "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
+                            if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
+                        '''
                     }
                 }
             }
@@ -105,25 +174,35 @@ pipeline {
 
         stage('Deploy (Docker Multi-Replica)') {
             when {
-                expression {
-                    def mode = (params.DEPLOY_MODE ?: '').toLowerCase()
-                    return mode.contains('replica') || mode.contains('multi')
-                }
+                expression { params.DEPLOY_MODE == 'docker-multi-replica' }
             }
             steps {
-                // Catatan: file .env harus sudah ada duluan di dalam VM (di VM_APP_DIR)
-                // docker-compose.prod.yml mengarahkan traffic melalui Nginx Load Balancer (port 80)
-                powershell """
-                    & "${env.MULTIPASS_BIN}" transfer docker-compose.prod.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.prod.yml
-                    & "${env.MULTIPASS_BIN}" transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml up -d --scale app=${params.REPLICA_COUNT ?: 2} --remove-orphans"
-                """
+                script {
+                    if (!(params.REPLICA_COUNT?.trim() ==~ /^[1-9][0-9]*$/)) {
+                        error('REPLICA_COUNT harus berupa angka >= 1.')
+                    }
+                }
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    $multipass =$env:MULTIPASS_BIN
+
+                    Write-Host "Transfer konfigurasi Multi-Replica..."
+                    & $multipass transfer docker-compose.prod.yml "$env:VM_NAME`:$env:VM_APP_DIR/docker-compose.prod.yml"
+                    & $multipass transfer -r infra "$env:VM_NAME`:$env:VM_APP_DIR/infra"
+                    if ($LASTEXITCODE -ne 0) { throw "Transfer file konfigurasi gagal." }
+
+                    Write-Host "Deploying Multi-Replica containers..."
+                    & $multipass exec$env:VM_NAME -- bash -lc "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=${env:REPLICA_COUNT} --remove-orphans"
+                    if ($LASTEXITCODE -ne 0) { throw "Deploy Multi-Replica gagal." }
+                '''
                 script {
                     if (params.RUN_MIGRATION) {
-                        echo "Menjalankan migrasi database di mode multi-replica..."
-                        powershell """
-                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml exec -T app npm run db:migrate:prod"
-                        """
+                        echo 'Menjalankan migrasi database (Multi-Replica)...'
+                        powershell '''
+                            $ErrorActionPreference = 'Stop'
+                            & $env:MULTIPASS_BIN exec $env:VM_NAME -- bash -lc "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm --no-deps app npm run db:migrate:prod"
+                            if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
+                        '''
                     }
                 }
             }
@@ -131,24 +210,37 @@ pipeline {
 
         stage('Deploy (K3s)') {
             when {
-                expression {
-                    def mode = (params.DEPLOY_MODE ?: '').toLowerCase()
-                    return mode.contains('k3s') || mode.contains('k8s')
-                }
+                expression { params.DEPLOY_MODE == 'k3s' }
             }
             steps {
-                powershell """
-                    & "${env.MULTIPASS_BIN}" transfer -r k8s ${VM_NAME}:${VM_APP_DIR}/k8s
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- bash -c "docker save ${APP_NAME}:latest -o ${VM_APP_DIR}/${APP_NAME}.tar"
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo k3s ctr -n k8s.io images import ${VM_APP_DIR}/${APP_NAME}.tar
-                    & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo bash -c "kubectl apply -f ${VM_APP_DIR}/k8s/00-namespace-and-config.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/01-postgres.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/02-redis.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/03-app.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/04-monitoring.yaml && kubectl rollout restart deploy/sitako-app -n sitako && kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
-                """
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    $multipass =$env:MULTIPASS_BIN
+
+                    Write-Host "Transfer Kubernetes manifests..."
+                    & $multipass transfer -r k8s "$env:VM_NAME`:$env:VM_APP_DIR/k8s"
+                    if ($LASTEXITCODE -ne 0) { throw "Transfer manifest K3s gagal." }
+
+                    Write-Host "Export & Import Docker Image ke K3s..."
+                    & $multipass exec $env:VM_NAME -- bash -lc "docker save '$env:APP_NAME`:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
+                    if ($LASTEXITCODE -ne 0) { throw "Import image ke K3s gagal." }
+
+                    Write-Host "Applying Kubernetes Manifests..."
+                    & $multipass exec$env:VM_NAME -- bash -lc "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s'"
+                    if ($LASTEXITCODE -ne 0) { throw "Apply manifest K3s gagal." }
+
+                    Write-Host "Restarting & Verifying Rollout..."
+                    & $multipass exec$env:VM_NAME -- bash -lc "sudo k3s kubectl rollout restart deploy/sitako-app -n sitako && sudo k3s kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
+                    if ($LASTEXITCODE -ne 0) { throw "Rollout restart K3s gagal." }
+                '''
                 script {
                     if (params.RUN_MIGRATION) {
-                        echo "Menjalankan migrasi database di Pod K3s..."
-                        powershell """
-                            & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- sudo kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
-                        """
+                        echo 'Menjalankan migrasi database di Pod K3s...'
+                        powershell '''
+                            $ErrorActionPreference = 'Stop'
+                            & $env:MULTIPASS_BIN exec$env:VM_NAME -- sudo k3s kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
+                            if ($LASTEXITCODE -ne 0) { throw "Migrasi database K3s gagal." }
+                        '''
                     }
                 }
             }
@@ -157,40 +249,52 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    def vmIp = powershell(script: "((& '${env.MULTIPASS_BIN}' info ${VM_NAME} | Select-String 'IPv4') -split '\\s+')[1]", returnStdout: true).trim()
-                    def mode = (params.DEPLOY_MODE ?: 'docker-standalone').toLowerCase()
-                    def targetUrl = ""
+                    def vmIp = powershell(
+                        script: '''
+                            $ErrorActionPreference = 'Stop'$output = & $env:MULTIPASS_BIN info$env:VM_NAME
+                            if ($LASTEXITCODE -ne 0) { throw "Gagal mendapatkan info VM." }
 
-                    if (mode.contains('standalone')) {
-                        // Mode standalone mengekspos port 8080 host langsung
-                        targetUrl = "http://${vmIp}:8080/"
-                    } else {
-                        // Multi-replica (Nginx LB port 80) dan K3s (Traefik Ingress port 80)
-                        targetUrl = "http://${vmIp}/"
-                    }
+                            $line =$output | Select-String '^IPv4:'
+                            if (-not $line) { throw "IPv4 VM tidak ditemukan." }
 
-                    echo "Memulai Health Check ke ${targetUrl} (Mode: ${params.DEPLOY_MODE ?: 'docker-standalone'})..."
-                    powershell """
-                        \$targetUrl = "${targetUrl}"
-                        \$success = \$false
-                        for (\$i = 1; \$i -le 12; \$i++) {
-                            try {
-                                \$res = Invoke-WebRequest -Uri \$targetUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-                                if (\$res.StatusCode -eq 200) {
-                                    Write-Host "Health check berhasil di \$targetUrl!"
-                                    \$success = \$true
-                                    break
+                            $ip = ($line.ToString() -replace '^IPv4:\\s*', '').Trim()
+                            if (-not $ip) { throw "IPv4 VM kosong." }
+
+                            Write-Output $ip
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    def targetUrl = params.DEPLOY_MODE == 'docker-standalone' 
+                        ? "http://${vmIp}:8080/" 
+                        : "http://${vmIp}/"
+
+                    echo "Memulai Health Check ke ${targetUrl}..."
+
+                    withEnv(["TARGET_URL=${targetUrl}"]) {
+                        powershell '''
+                            $ErrorActionPreference = 'Stop'
+                            $success =$false
+
+                            for ($i = 1; $i -le 12; $i++) {
+                                try {
+                                    $response = Invoke-WebRequest -Uri$env:TARGET_URL -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                                    if ($response.StatusCode -eq 200) {
+                                        Write-Host "Health check berhasil di $env:TARGET_URL"
+                                        $success =$true
+                                        break
+                                    }
+                                } catch {
+                                    Write-Host "Percobaan $i/12 belum berhasil."
+                                    if ($i -lt 12) { Start-Sleep -Seconds 5 }
                                 }
-                            } catch {
-                                Write-Host "Percobaan \$i belum siap, mencoba lagi dalam 5 detik..."
-                                Start-Sleep -Seconds 5
                             }
-                        }
-                        if (-not \$success) {
-                            Write-Error "Health check gagal setelah 12 percobaan ke \$targetUrl."
-                            exit 1
-                        }
-                    """
+
+                            if (-not $success) {
+                                throw "Health check gagal setelah 12 percobaan ke $env:TARGET_URL."
+                            }
+                        '''
+                    }
                 }
             }
         }
@@ -198,15 +302,23 @@ pipeline {
 
     post {
         success {
-            echo "Deploy (${params.DEPLOY_MODE ?: 'docker-standalone'}) ke ${VM_NAME} berhasil (build #${env.BUILD_NUMBER})"
+            echo "Deploy ${params.DEPLOY_MODE} ke ${env.VM_NAME} berhasil (build #${env.BUILD_NUMBER})"
         }
+
         failure {
-            echo "Pipeline gagal pada mode ${params.DEPLOY_MODE ?: 'docker-standalone'}, cek log di atas."
+            echo "Pipeline gagal pada mode ${params.DEPLOY_MODE}. Periksa log stage yang gagal."
         }
+
         always {
-            powershell """
-                & "${env.MULTIPASS_BIN}" exec ${VM_NAME} -- rm -rf ${VM_APP_DIR}/src ${VM_APP_DIR}/${APP_NAME}.tar || exit 0
-            """
+            powershell '''
+                $ErrorActionPreference = 'Continue'
+                $multipass =$env:MULTIPASS_BIN
+
+                if (Test-Path -LiteralPath $multipass) {
+                    & $multipass exec $env:VM_NAME -- rm -rf "$env:VM_APP_DIR/src" "$env:VM_APP_DIR/$env:APP_NAME.tar"
+                }
+                exit 0
+            '''
             cleanWs()
         }
     }
