@@ -67,20 +67,12 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
-            steps {
-                powershell """
-                    multipass transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
-                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${APP_NAME}:latest ."
-                """
-            }
-        }
-
-        stage('Ship Image to VM') {
+        stage('Docker Build (in VM)') {
             steps {
                 powershell """
                     multipass exec ${VM_NAME} -- mkdir -p ${VM_APP_DIR}
-                    multipass transfer ${APP_NAME}.tar ${VM_NAME}:${VM_APP_DIR}/${APP_NAME}.tar
+                    multipass transfer -r . ${VM_NAME}:${VM_APP_DIR}/src
+                    multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR}/src && docker build -t ${IMAGE_TAG} -t ${APP_NAME}:latest ."
                 """
             }
         }
@@ -98,7 +90,6 @@ pipeline {
                 powershell """
                     multipass transfer docker-compose.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.yml
                     multipass transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    multipass exec ${VM_NAME} -- docker load -i ${VM_APP_DIR}/${APP_NAME}.tar
                     multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.yml up -d --remove-orphans"
                 """
                 script {
@@ -125,7 +116,6 @@ pipeline {
                 powershell """
                     multipass transfer docker-compose.prod.yml ${VM_NAME}:${VM_APP_DIR}/docker-compose.prod.yml
                     multipass transfer -r infra ${VM_NAME}:${VM_APP_DIR}/infra
-                    multipass exec ${VM_NAME} -- docker load -i ${VM_APP_DIR}/${APP_NAME}.tar
                     multipass exec ${VM_NAME} -- bash -c "cd ${VM_APP_DIR} && docker compose -f docker-compose.prod.yml up -d --scale app=${params.REPLICA_COUNT ?: 2} --remove-orphans"
                 """
                 script {
@@ -149,6 +139,7 @@ pipeline {
             steps {
                 powershell """
                     multipass transfer -r k8s ${VM_NAME}:${VM_APP_DIR}/k8s
+                    multipass exec ${VM_NAME} -- bash -c "docker save ${APP_NAME}:latest -o ${VM_APP_DIR}/${APP_NAME}.tar"
                     multipass exec ${VM_NAME} -- sudo k3s ctr -n k8s.io images import ${VM_APP_DIR}/${APP_NAME}.tar
                     multipass exec ${VM_NAME} -- sudo bash -c "kubectl apply -f ${VM_APP_DIR}/k8s/00-namespace-and-config.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/01-postgres.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/02-redis.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/03-app.yaml && kubectl apply -f ${VM_APP_DIR}/k8s/04-monitoring.yaml && kubectl rollout restart deploy/sitako-app -n sitako && kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
                 """
@@ -213,8 +204,7 @@ pipeline {
             echo "Pipeline gagal pada mode ${params.DEPLOY_MODE ?: 'docker-standalone'}, cek log di atas."
         }
         always {
-            powershell "Remove-Item -Path '${APP_NAME}.tar' -Force -ErrorAction SilentlyContinue"
-            powershell "multipass exec ${VM_NAME} -- rm -f ${VM_APP_DIR}/${APP_NAME}.tar || exit 0"
+            powershell "multipass exec ${VM_NAME} -- rm -rf ${VM_APP_DIR}/src ${VM_APP_DIR}/${APP_NAME}.tar"
             cleanWs()
         }
     }
