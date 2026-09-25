@@ -545,20 +545,20 @@ pipeline {
                         script: '''
                             $ErrorActionPreference = 'Stop'
 
-                            $output = & $env:MULTIPASS_BIN info $env:VM_NAME
+                            $output = & $env:MULTIPASS_BIN info$env:VM_NAME
 
                             if ($LASTEXITCODE -ne 0) {
                                 throw "Gagal mendapatkan info VM."
                             }
 
-                            $line = $output | Select-String '^IPv4:'
+                            $line =$output | Select-String '^IPv4:'
 
                             if (-not $line) {
                                 throw "IPv4 VM tidak ditemukan."
                             }
 
                             $rawIps = ($line.ToString() -replace '^IPv4:[ ]*', '').Trim()
-                            $ip = ($rawIps -split '\s+')[0]
+                            $ip = ($rawIps -split '\\s+')[0]
 
                             Write-Output $ip
                         ''',
@@ -575,7 +575,7 @@ pipeline {
                         powershell '''
                             $ErrorActionPreference = 'Stop'
 
-                            $success = $false
+                            $success =$false
 
                             for ($i = 1; $i -le 12; $i++) {
                                 try {
@@ -587,7 +587,7 @@ pipeline {
 
                                     if ($response.StatusCode -eq 200) {
                                         Write-Host "Health check berhasil di $env:TARGET_URL"
-                                        $success = $true
+                                        $success =$true
                                         break
                                     }
                                 }
