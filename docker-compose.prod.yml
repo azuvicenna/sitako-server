@@ -10,11 +10,7 @@ services:
   # Service App (Backend Node.js)
   # Tanpa container_name & port mapping host agar siap di-scale multi-replica
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV:-production}
+    image: sitako-server:latest
     restart: unless-stopped
     environment:
       - APP_NAME=${APP_NAME:-SITAKO-server}

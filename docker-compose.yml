@@ -2,11 +2,7 @@ name: sitako-server
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV:-production}
+    image: sitako-server:latest
     container_name: sitako-app
     restart: unless-stopped
     ports:
