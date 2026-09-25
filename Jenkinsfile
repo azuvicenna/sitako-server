@@ -31,6 +31,7 @@ pipeline {
 
     options {
         skipDefaultCheckout(true)
+        disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timeout(time: 20, unit: 'MINUTES')
         timestamps()
@@ -433,7 +434,7 @@ pipeline {
                     Write-Host "Export & Import Docker Image ke K3s..."
 
                     & $multipass exec $env:VM_NAME -- bash -lc `
-                        "docker save '$($env:APP_NAME):latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
+                        "docker save '$($env:APP_NAME):latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar'"
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Import image ke K3s gagal."
