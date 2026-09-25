@@ -239,9 +239,9 @@ pipeline {
 
             steps {
                 withCredentials([
-                    string(
+                    file(
                         credentialsId: 'sitako-env',
-                        variable: 'SITAKO_ENV'
+                        variable: 'SITAKO_ENV_FILE'
                     )
                 ]) {
                     powershell '''
@@ -269,8 +269,8 @@ pipeline {
 
                         Write-Host "Menyiapkan .env..."
 
-                        $env:SITAKO_ENV | & $multipass transfer `
-                            - `
+                        & $multipass transfer `
+                            $env:SITAKO_ENV_FILE `
                             "$($env:VM_NAME):$($env:VM_APP_DIR)/.env"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -333,9 +333,9 @@ pipeline {
                 }
 
                 withCredentials([
-                    string(
+                    file(
                         credentialsId: 'sitako-env',
-                        variable: 'SITAKO_ENV'
+                        variable: 'SITAKO_ENV_FILE'
                     )
                 ]) {
                     powershell '''
@@ -363,8 +363,8 @@ pipeline {
 
                         Write-Host "Menyiapkan .env..."
 
-                        $env:SITAKO_ENV | & $multipass transfer `
-                            - `
+                        & $multipass transfer `
+                            $env:SITAKO_ENV_FILE `
                             "$($env:VM_NAME):$($env:VM_APP_DIR)/.env"
 
                         if ($LASTEXITCODE -ne 0) {
