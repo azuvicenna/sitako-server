@@ -259,15 +259,6 @@ pipeline {
                             throw "Transfer docker-compose.yml gagal."
                         }
 
-                        Write-Host "Starting database & supporting services..."
-
-                        & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Start service pendukung gagal."
-                        }
-
                         & $multipass transfer `
                             -r infra `
                             "$($env:VM_NAME):$($env:VM_APP_DIR)/infra"
@@ -291,6 +282,15 @@ pipeline {
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Gagal mengatur permission .env."
+                        }
+
+                        Write-Host "Starting database & supporting services..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Start service pendukung gagal."
                         }
                     '''
 
@@ -368,15 +368,6 @@ pipeline {
                             throw "Transfer docker-compose.prod.yml gagal."
                         }
 
-                        Write-Host "Starting database & supporting services..."
-
-                        & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Start service pendukung gagal."
-                        }
-
                         & $multipass transfer `
                             -r infra `
                             "$($env:VM_NAME):$($env:VM_APP_DIR)/infra"
@@ -400,6 +391,15 @@ pipeline {
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Gagal mengatur permission .env."
+                        }
+
+                        Write-Host "Starting database & supporting services..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Start service pendukung gagal."
                         }
                     '''
 
