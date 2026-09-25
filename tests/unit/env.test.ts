@@ -3,7 +3,7 @@ describe('Environment Variables (.env.test)', () => {
     expect(process.env.NODE_ENV).toBe('test');
     expect(process.env.JWT_SECRET).toBe('test-secret-key-for-jest');
     expect(process.env.ALLOWED_ORIGIN).toBe('http://localhost:3000');
-    expect(process.env.APP_NAME).toBe('SITAKO-server');
+    expect(process.env.APP_NAME).toBe('sitako-server');
     expect(process.env.APP_ENV).toBe('test');
     expect(process.env.PORT).toBe('8080');
   });
