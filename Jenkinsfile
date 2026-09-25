@@ -40,7 +40,7 @@ pipeline {
             steps {
                 withCredentials([
                     string(
-                        credentialsId: 'multipass-passphrase',
+                        credentialsId: 'multipass-passphrase-global',
                         variable: 'MULTIPASS_PASSPHRASE'
                     )
                 ]) {
