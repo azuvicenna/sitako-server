@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent any
 
@@ -495,4 +494,3 @@ exit 0
         }
     }
 }
-```
