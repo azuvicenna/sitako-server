@@ -300,8 +300,10 @@ pipeline {
 
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
-
                                 $multipass = $env:MULTIPASS_BIN
+
+                                Write-Host "Menunggu 10 detik agar container dan database stabil..."
+                                Start-Sleep -Seconds 10
 
                                 & $multipass exec $env:VM_NAME -- bash -lc `
                                     "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
@@ -392,11 +394,13 @@ pipeline {
 
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
-
                                 $multipass = $env:MULTIPASS_BIN
 
+                                Write-Host "Menjalankan migrasi (menunggu database healthy terlebih dahulu)..."
+
+                                # Flag --no-deps dihapus agar mematuhi depends_on di docker-compose.prod.yml
                                 & $multipass exec $env:VM_NAME -- bash -lc `
-                                    "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm --no-deps app npm run db:migrate:prod"
+                                    "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm app npm run db:migrate:prod"
 
                                 if ($LASTEXITCODE -ne 0) {
                                     throw "Migrasi database gagal."
@@ -465,10 +469,12 @@ pipeline {
 
                         powershell '''
                             $ErrorActionPreference = 'Stop'
+                            $multipass =$env:MULTIPASS_BIN
 
-                            $multipass = $env:MULTIPASS_BIN
+                            Write-Host "Menunggu 15 detik agar Pod baru sepenuhnya siap menerima eksekusi..."
+                            Start-Sleep -Seconds 15
 
-                            & $multipass exec $env:VM_NAME -- sudo k3s kubectl exec `
+                            & $multipass exec$env:VM_NAME -- sudo k3s kubectl exec `
                                 -n sitako `
                                 deploy/sitako-app `
                                 -c backend `
