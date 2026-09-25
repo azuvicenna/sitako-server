@@ -249,6 +249,16 @@ pipeline {
 
                         $multipass = $env:MULTIPASS_BIN
 
+                        Write-Host "Transfer konfigurasi Docker Standalone..."
+
+                        & $multipass transfer `
+                            docker-compose.yml `
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.yml"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Transfer docker-compose.yml gagal."
+                        }
+
                         Write-Host "Starting database & supporting services..."
 
                         & $multipass exec $env:VM_NAME -- bash -lc `
@@ -347,6 +357,16 @@ pipeline {
                         $ErrorActionPreference = 'Stop'
 
                         $multipass = $env:MULTIPASS_BIN
+
+                        Write-Host "Transfer konfigurasi Multi-Replica..."
+
+                        & $multipass transfer `
+                            docker-compose.prod.yml `
+                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.prod.yml"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Transfer docker-compose.prod.yml gagal."
+                        }
 
                         Write-Host "Starting database & supporting services..."
 
