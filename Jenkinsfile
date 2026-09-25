@@ -249,14 +249,13 @@ pipeline {
 
                         $multipass = $env:MULTIPASS_BIN
 
-                        Write-Host "Transfer konfigurasi Docker Standalone..."
+                        Write-Host "Starting database & supporting services..."
 
-                        & $multipass transfer `
-                            docker-compose.yml `
-                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.yml"
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
 
                         if ($LASTEXITCODE -ne 0) {
-                            throw "Transfer docker-compose.yml gagal."
+                            throw "Start service pendukung gagal."
                         }
 
                         & $multipass transfer `
@@ -283,15 +282,6 @@ pipeline {
                         if ($LASTEXITCODE -ne 0) {
                             throw "Gagal mengatur permission .env."
                         }
-
-                        Write-Host "Deploying Standalone container..."
-
-                        & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans"
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Deploy Standalone gagal."
-                        }
                     '''
 
                     script {
@@ -302,11 +292,11 @@ pipeline {
                                 $ErrorActionPreference = 'Stop'
                                 $multipass = $env:MULTIPASS_BIN
 
-                                Write-Host "Menunggu 10 detik agar container dan database stabil..."
+                                Write-Host "Menunggu database healthy..."
                                 Start-Sleep -Seconds 10
 
                                 & $multipass exec $env:VM_NAME -- bash -lc `
-                                    "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
+                                    "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml run --rm app npm run db:migrate:prod"
 
                                 if ($LASTEXITCODE -ne 0) {
                                     throw "Migrasi database gagal."
@@ -314,6 +304,21 @@ pipeline {
                             '''
                         }
                     }
+
+                    powershell '''
+                        $ErrorActionPreference = 'Stop'
+
+                        $multipass = $env:MULTIPASS_BIN
+
+                        Write-Host "Starting app container..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans app"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Start app gagal."
+                        }
+                    '''
                 }
             }
         }
@@ -343,14 +348,13 @@ pipeline {
 
                         $multipass = $env:MULTIPASS_BIN
 
-                        Write-Host "Transfer konfigurasi Multi-Replica..."
+                        Write-Host "Starting database & supporting services..."
 
-                        & $multipass transfer `
-                            docker-compose.prod.yml `
-                            "$($env:VM_NAME):$($env:VM_APP_DIR)/docker-compose.prod.yml"
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter prometheus"
 
                         if ($LASTEXITCODE -ne 0) {
-                            throw "Transfer docker-compose.prod.yml gagal."
+                            throw "Start service pendukung gagal."
                         }
 
                         & $multipass transfer `
@@ -377,15 +381,6 @@ pipeline {
                         if ($LASTEXITCODE -ne 0) {
                             throw "Gagal mengatur permission .env."
                         }
-
-                        Write-Host "Deploying Multi-Replica containers..."
-
-                        & $multipass exec $env:VM_NAME -- bash -lc `
-                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans"
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Deploy Multi-Replica gagal."
-                        }
                     '''
 
                     script {
@@ -408,6 +403,21 @@ pipeline {
                             '''
                         }
                     }
+
+                    powershell '''
+                        $ErrorActionPreference = 'Stop'
+
+                        $multipass = $env:MULTIPASS_BIN
+
+                        Write-Host "Deploying Multi-Replica containers..."
+
+                        & $multipass exec $env:VM_NAME -- bash -lc `
+                            "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans"
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Deploy Multi-Replica gagal."
+                        }
+                    '''
                 }
             }
         }
