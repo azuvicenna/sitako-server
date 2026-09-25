@@ -158,7 +158,7 @@ pipeline {
                     $ErrorActionPreference = 'Stop'
 
                     $multipass =$env:MULTIPASS_BIN
-                    $stagingDir = Join-Path$env:WORKSPACE '..\\sitako-deploy'
+                    $stagingDir = Join-Path$env:WORKSPACE '..\sitako-deploy'
 
                     Write-Host "Menyiapkan source untuk deployment..."
 
@@ -173,9 +173,9 @@ pipeline {
                         $stagingDir `
                         /E `
                         /XD `
-                            "$env:WORKSPACE\\node_modules" `
-                            "$env:WORKSPACE\\.git" `
-                            "$env:WORKSPACE\\coverage" `
+                            "$env:WORKSPACE\node_modules" `
+                            "$env:WORKSPACE\.git" `
+                            "$env:WORKSPACE\coverage" `
                         /XF `
                             "Jenkinsfile"
 
@@ -195,7 +195,7 @@ pipeline {
                     Write-Host "Transfer source code ke VM..."
 
                     & $multipass transfer `
-                        -r "$stagingDir\\." `
+                        -r "$stagingDir\." `
                         "$env:VM_NAME`:$env:VM_APP_DIR/src"
 
                     if ($LASTEXITCODE -ne 0) {
@@ -205,7 +205,7 @@ pipeline {
                     Write-Host "Building Docker image di VM..."
 
                     & $multipass exec $env:VM_NAME -- bash -lc `
-                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME`:latest' ."
+                        "cd '$env:VM_APP_DIR/src' && docker build -t '$env:IMAGE_TAG' -t '$env:APP_NAME:latest' ."
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Docker build gagal."
@@ -237,7 +237,7 @@ pipeline {
 
                         & $multipass transfer `
                             docker-compose.yml `
-                            "$env:VM_NAME:$env:VM_APP_DIR/docker-compose.yml"
+                            "$env:VM_NAME`:$env:VM_APP_DIR/docker-compose.yml"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer docker-compose.yml gagal."
@@ -245,7 +245,7 @@ pipeline {
 
                         & $multipass transfer `
                             -r infra `
-                            "$env:VM_NAME:$env:VM_APP_DIR/infra"
+                            "$env:VM_NAME`:$env:VM_APP_DIR/infra"
 
                         if ($LASTEXITCODE -ne 0) {
                             throw "Transfer infra gagal."
@@ -257,7 +257,7 @@ pipeline {
                             [Text.Encoding]::UTF8.GetBytes($env:SITAKO_ENV)
                         )
 
-                        & $multipass exec $env:VM_NAME -- bash -lc `
+                        & $multipass exec$env:VM_NAME -- bash -lc `
                             "echo '$encodedEnv' | base64 -d > '$env:VM_APP_DIR/.env' && chmod 600 '$env:VM_APP_DIR/.env'"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -266,7 +266,7 @@ pipeline {
 
                         Write-Host "Deploying Standalone container..."
 
-                        & $multipass exec$env:VM_NAME -- bash -lc `
+                        & $multipass exec $env:VM_NAME -- bash -lc `
                             "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -282,9 +282,9 @@ pipeline {
                         powershell '''
                             $ErrorActionPreference = 'Stop'
 
-                            $multipass = $env:MULTIPASS_BIN
+                            $multipass =$env:MULTIPASS_BIN
 
-                            & $multipass exec $env:VM_NAME -- bash -lc `
+                            & $multipass exec$env:VM_NAME -- bash -lc `
                                 "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml exec -T app npm run db:migrate:prod"
 
                             if ($LASTEXITCODE -ne 0) {
@@ -319,7 +319,7 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        $multipass =$env:MULTIPASS_BIN
+                        $multipass = $env:MULTIPASS_BIN
 
                         Write-Host "Transfer konfigurasi Multi-Replica..."
 
@@ -345,7 +345,7 @@ pipeline {
                             [Text.Encoding]::UTF8.GetBytes($env:SITAKO_ENV)
                         )
 
-                        & $multipass exec$env:VM_NAME -- bash -lc `
+                        & $multipass exec $env:VM_NAME -- bash -lc `
                             "echo '$encodedEnv' | base64 -d > '$env:VM_APP_DIR/.env' && chmod 600 '$env:VM_APP_DIR/.env'"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -354,7 +354,7 @@ pipeline {
 
                         Write-Host "Deploying Multi-Replica containers..."
 
-                        & $multipass exec $env:VM_NAME -- bash -lc `
+                        & $multipass exec$env:VM_NAME -- bash -lc `
                             "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans"
 
                         if ($LASTEXITCODE -ne 0) {
@@ -369,9 +369,9 @@ pipeline {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
 
-                                $multipass =$env:MULTIPASS_BIN
+                                $multipass = $env:MULTIPASS_BIN
 
-                                & $multipass exec$env:VM_NAME -- bash -lc `
+                                & $multipass exec $env:VM_NAME -- bash -lc `
                                     "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm --no-deps app npm run db:migrate:prod"
 
                                 if ($LASTEXITCODE -ne 0) {
@@ -395,7 +395,7 @@ pipeline {
                 powershell '''
                     $ErrorActionPreference = 'Stop'
 
-                    $multipass = $env:MULTIPASS_BIN
+                    $multipass =$env:MULTIPASS_BIN
 
                     Write-Host "Transfer Kubernetes manifests..."
 
@@ -409,8 +409,8 @@ pipeline {
 
                     Write-Host "Export & Import Docker Image ke K3s..."
 
-                    & $multipass exec$env:VM_NAME -- bash -lc `
-                        "docker save '$env:APP_NAME`:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
+                    & $multipass exec $env:VM_NAME -- bash -lc `
+                        "docker save '$env:APP_NAME:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar'"
 
                     if ($LASTEXITCODE -ne 0) {
                         throw "Import image ke K3s gagal."
