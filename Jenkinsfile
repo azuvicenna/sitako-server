@@ -248,7 +248,7 @@ String vmPrelude() {
         }
 
         function pullImageOnVm {
-            $env:DOCKER_PASS | & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
+            $env:DOCKER_PASS | & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && tr -d '\r' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
             if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
         }
     '''
