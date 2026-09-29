@@ -23,10 +23,10 @@ pipeline {
 
     environment {
         APP_NAME = 'sitako-server'
-        REGISTRY_IMAGE = "neibreen/sitako-server" 
+        REGISTRY_IMAGE = "neibreen/sitako-server"
         IMAGE_TAG = "${REGISTRY_IMAGE}:${BUILD_NUMBER}"
         IMAGE_LATEST = "${REGISTRY_IMAGE}:latest"
-        
+
         // Konfigurasi Port Forwarding VirtualBox
         VM_USER = 'admin-sitako'
         VM_IP = '127.0.0.1'
@@ -45,21 +45,10 @@ pipeline {
     stages {
         stage('Verify VM Connection') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-                        
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:(R)" | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "SYSTEM:(R)" | Out-Null
-
-                        ssh -q -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL $env:VM_USER@$env:VM_IP "echo 'Koneksi SSH ke VirtualBox berhasil.'"
-                        if ($LASTEXITCODE -ne 0) { throw "VM '$env:VM_IP:$env:VM_PORT' tidak dapat diakses melalui SSH." }
-                    '''
+                script {
+                    onVm('''
+                        runSsh "echo 'Koneksi SSH ke VirtualBox berhasil.'"
+                    ''')
                 }
             }
         }
@@ -115,13 +104,7 @@ pipeline {
 
         stage('Docker Build & Push') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'docker-registry-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
+                withCredentials([dockerCredentials()]) {
                     bat '''
                         echo 1. Memulai proses Docker Build...
                         docker build -t %IMAGE_TAG% -t %IMAGE_LATEST% .
@@ -150,68 +133,8 @@ pipeline {
                 expression { params.DEPLOY_MODE == 'docker-standalone' }
             }
             steps {
-                withCredentials([
-                    file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
-                    usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                    sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no ".\docker-compose.yml" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.yml"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer docker-compose.yml gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml stop app 2>/dev/null; docker compose -f docker-compose.yml rm -f app 2>/dev/null; true"
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\infra" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer infra gagal." }
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no "$env:SITAKO_ENV_FILE" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/.env"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal mentransfer .env ke VM." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "chmod 600 '$env:VM_APP_DIR/.env'"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal mengatur permission .env." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans database redis postgres_exporter redis_exporter"
-                        if ($LASTEXITCODE -ne 0) { throw "Start service pendukung gagal." }
-                    '''
-
-                    script {
-                        if (params.RUN_MIGRATION) {
-                            powershell '''
-                                $ErrorActionPreference = 'Stop'
-
-                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                                icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                                icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                                Start-Sleep -Seconds 10
-                                ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml run --rm app npm run db:migrate:prod"
-                                if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
-                            '''
-                        }
-                    }
-
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans app"
-                        if ($LASTEXITCODE -ne 0) { throw "Start app gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans prometheus && docker image prune -f"
-                        if ($LASTEXITCODE -ne 0) { throw "Start prometheus dan pruning image gagal." }
-                    '''
+                script {
+                    deployCompose('docker-compose.yml', '1', 'prometheus')
                 }
             }
         }
@@ -225,69 +148,7 @@ pipeline {
                     if (!(params.REPLICA_COUNT?.trim() ==~ /^[1-9][0-9]*$/)) {
                         error('REPLICA_COUNT harus berupa angka >= 1.')
                     }
-                }
-                withCredentials([
-                    file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
-                    usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                    sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no ".\docker-compose.prod.yml" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.prod.yml"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer docker-compose.prod.yml gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml stop app 2>/dev/null; docker compose -f docker-compose.prod.yml rm -f app 2>/dev/null; true"
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\infra" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer infra gagal." }
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no "$env:SITAKO_ENV_FILE" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/.env"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal mentransfer .env ke VM." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "chmod 600 '$env:VM_APP_DIR/.env'"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal mengatur permission .env." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans database redis postgres_exporter redis_exporter"
-                        if ($LASTEXITCODE -ne 0) { throw "Start service pendukung gagal." }
-                    '''
-
-                    script {
-                        if (params.RUN_MIGRATION) {
-                            powershell '''
-                                $ErrorActionPreference = 'Stop'
-
-                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                                icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                                icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                                Start-Sleep -Seconds 10
-                                ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm app npm run db:migrate:prod"
-                                if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
-                            '''
-                        }
-                    }
-
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans app"
-                        if ($LASTEXITCODE -ne 0) { throw "Start app (Replica) gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --remove-orphans nginx prometheus && docker image prune -f"
-                        if ($LASTEXITCODE -ne 0) { throw "Start nginx/prometheus dan pruning image gagal." }
-                    '''
+                    deployCompose('docker-compose.prod.yml', params.REPLICA_COUNT.trim(), 'nginx prometheus')
                 }
             }
         }
@@ -297,95 +158,136 @@ pipeline {
                 expression { params.DEPLOY_MODE == 'k3s' }
             }
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
-                    sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
-
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\k8s" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/k8s"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer manifest K3s gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "docker save '$env:IMAGE_LATEST' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
-                        if ($LASTEXITCODE -ne 0) { throw "Import image ke K3s dan pruning image gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s'"
-                        if ($LASTEXITCODE -ne 0) { throw "Apply manifest K3s gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl rollout restart deploy/sitako-app -n sitako && sudo k3s kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
-                        if ($LASTEXITCODE -ne 0) { throw "Rollout restart K3s gagal." }
-                    '''
-                }
-
                 script {
-                    if (params.RUN_MIGRATION) {
-                        withCredentials([
-                            sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                        ]) {
-                            powershell '''
-                                $ErrorActionPreference = 'Stop'
+                    onVm('''
+                        pullImageOnVm
 
-                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                                icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                                icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
+                        runSsh "docker save '$env:IMAGE_LATEST' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
 
-                                Start-Sleep -Seconds 15
-                                ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod"
+                        copyToVm k8s "$env:VM_APP_DIR/"
+                        copyToVm $env:K8S_SECRET_FILE "$env:VM_APP_DIR/k8s/sitako-secret.yml"
+                        runSsh "chmod 600 '$env:VM_APP_DIR/k8s/sitako-secret.yml'"
 
-                                if ($LASTEXITCODE -ne 0) { throw "Migrasi database K3s gagal." }
-                            '''
-                        }
-                    }
+                        runSsh "kubectl apply -f '$env:VM_APP_DIR/k8s/sitako-secret.yml' && kubectl apply -f '$env:VM_APP_DIR/k8s/' && kubectl rollout restart deployment/sitako-backend"
+                    ''', [
+                        file(credentialsId: 'sitako-k8s-secret', variable: 'K8S_SECRET_FILE'),
+                        dockerCredentials()
+                    ])
                 }
             }
         }
 
         stage('Health Check') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
+                script {
+                    onVm('''
+                        Start-Sleep -Seconds 15
 
-                        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
-                        icacls "$env:SSH_KEY" /grant:r "$($env:USERNAME):F" | Out-Null
-
-                        $success = $false
-
-                        for ($i = 1; $i -le 12; $i++) {
-                            ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "curl -fsS --max-time 5 http://127.0.0.1:8080/"
-                            if ($LASTEXITCODE -eq 0) {
-                                $success = $true
-                                break
-                            }
-                            if ($i -lt 12) { Start-Sleep -Seconds 5 }
+                        $healthy = $false
+                        for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
+                            Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
+                            $output = & ssh -q -p $env:VM_PORT @sshOptions $remote "curl -s http://localhost:8080/health"
+                            $healthy = "$output" -match 'OK|UP'
+                            if (-not $healthy) { Start-Sleep -Seconds 10 }
                         }
 
-                        if (-not $success) { throw "Health check aplikasi gagal." }
-                    '''
+                        if (-not $healthy) { throw "Aplikasi gagal berjalan atau tidak merespons setelah 10 percobaan." }
+                        Write-Host "Health check berhasil!"
+                    ''')
                 }
             }
         }
     }
 
     post {
-        success {
-            echo "Deploy ${params.DEPLOY_MODE} berhasil (build #${env.BUILD_NUMBER})"
-        }
-        failure {
-            echo "Pipeline gagal pada mode ${params.DEPLOY_MODE}."
-        }
         always {
             cleanWs()
         }
+        success {
+            echo "Pipeline SITAKO ($DEPLOY_MODE) selesai dengan sukses."
+        }
+        failure {
+            echo "Pipeline SITAKO ($DEPLOY_MODE) gagal."
+        }
+    }
+}
+
+def dockerCredentials() {
+    return usernamePassword(
+        credentialsId: 'docker-registry-creds',
+        usernameVariable: 'DOCKER_USER',
+        passwordVariable: 'DOCKER_PASS'
+    )
+}
+
+// Helper PowerShell yang dipakai semua stage yang berbicara dengan VM.
+String vmPrelude() {
+    return '''
+        $ErrorActionPreference = 'Stop'
+
+        $remote = "$($env:VM_USER)@$($env:VM_IP)"
+        $sshOptions = @('-i', $env:SSH_KEY, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=NUL')
+
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        icacls "$env:SSH_KEY" /inheritance:r | Out-Null
+        icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
+
+        Write-Host "scp yang dipakai: $((Get-Command scp).Source)"
+
+        function runSsh([string]$command) {
+            & ssh -q -p $env:VM_PORT @sshOptions $remote $command
+            if ($LASTEXITCODE -ne 0) { throw "Perintah SSH gagal: $command" }
+        }
+
+        function copyToVm([string]$source, [string]$target) {
+            if (-not (Test-Path -LiteralPath $source)) {
+                throw "'$source' tidak ditemukan di workspace ($(Get-Location))."
+            }
+            & scp -q -r -P $env:VM_PORT @sshOptions $source "${remote}:$target"
+            if ($LASTEXITCODE -ne 0) { throw "Transfer '$source' gagal." }
+        }
+
+        function pullImageOnVm {
+            $env:DOCKER_PASS | & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
+            if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
+        }
+    '''
+}
+
+// Menjalankan script PowerShell dengan SSH key (dan credential tambahan bila ada).
+def onVm(String script, List extraCredentials = []) {
+    withCredentials([sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')] + extraCredentials) {
+        powershell(vmPrelude() + script)
+    }
+}
+
+// Deploy standalone dan multi-replica sama, hanya beda compose file, jumlah replika, dan service tambahan.
+def deployCompose(String composeFile, String appScale, String edgeServices) {
+    withEnv(["COMPOSE_FILE=${composeFile}", "APP_SCALE=${appScale}", "EDGE_SERVICES=${edgeServices}"]) {
+        onVm('''
+            pullImageOnVm
+
+            copyToVm $env:COMPOSE_FILE "$env:VM_APP_DIR/$env:COMPOSE_FILE"
+
+            $compose = "cd '$env:VM_APP_DIR' && docker compose -f $env:COMPOSE_FILE"
+            runSsh "$compose stop app 2>/dev/null; $compose rm -f app 2>/dev/null; true"
+
+            copyToVm infra "$env:VM_APP_DIR/"
+            copyToVm $env:SITAKO_ENV_FILE "$env:VM_APP_DIR/.env"
+            runSsh "chmod 600 '$env:VM_APP_DIR/.env'"
+
+            runSsh "$compose up -d --remove-orphans database redis postgres_exporter redis_exporter"
+
+            if ($env:RUN_MIGRATION -eq 'true') {
+                Start-Sleep -Seconds 10
+                runSsh "$compose run --rm app npm run db:migrate:prod"
+            }
+
+            runSsh "$compose up -d --scale app=$env:APP_SCALE --remove-orphans app"
+            runSsh "$compose up -d --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
+        ''', [
+            file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
+            dockerCredentials()
+        ])
     }
 }
