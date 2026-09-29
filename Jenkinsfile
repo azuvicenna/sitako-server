@@ -248,7 +248,7 @@ String vmPrelude() {
         }
 
         function pullImageOnVm {
-            & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
+            & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker tag '$env:IMAGE_TAG' '${env:APP_NAME}:latest' && docker logout"
             if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
         }
     '''
@@ -276,7 +276,7 @@ def deployCompose(String composeFile, String appScale, String edgeServices) {
             copyToVm $env:SITAKO_ENV_FILE "$env:VM_APP_DIR/.env"
             runSsh "chmod 600 '$env:VM_APP_DIR/.env'"
 
-            runSsh "$compose up -d --remove-orphans database redis postgres_exporter redis_exporter"
+            runSsh "$compose up -d --quiet-pull --remove-orphans database redis postgres_exporter redis_exporter"
 
             if ($env:RUN_MIGRATION -eq 'true') {
                 Start-Sleep -Seconds 10
@@ -284,7 +284,7 @@ def deployCompose(String composeFile, String appScale, String edgeServices) {
             }
 
             runSsh "$compose up -d --scale app=$env:APP_SCALE --remove-orphans app"
-            runSsh "$compose up -d --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
+            runSsh "$compose up -d --quiet-pull --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
         ''', [
             file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
             dockerCredentials()
