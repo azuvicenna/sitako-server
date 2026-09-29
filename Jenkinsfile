@@ -51,7 +51,12 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
                         
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "echo 'Koneksi SSH ke VirtualBox berhasil.'"
+                        # Fix permission private key file di Windows
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):(R)" | Out-Null
+
+                        # Tes koneksi SSH
+                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL $env:VM_USER@$env:VM_IP "echo 'Koneksi SSH ke VirtualBox berhasil.'"
                         if ($LASTEXITCODE -ne 0) { throw "VM '$env:VM_IP:$env:VM_PORT' tidak dapat diakses melalui SSH." }
                     '''
                 }
