@@ -161,6 +161,10 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
+                        # Reset permission SSH Private Key agar diterima OpenSSH
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
@@ -186,6 +190,10 @@ pipeline {
                         if (params.RUN_MIGRATION) {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
+
+                                icacls $env:SSH_KEY /inheritance:r | Out-Null
+                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                                 Start-Sleep -Seconds 10
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml run --rm app npm run db:migrate:prod"
                                 if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
@@ -195,6 +203,10 @@ pipeline {
 
                     powershell '''
                         $ErrorActionPreference = 'Stop'
+
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans app"
                         if ($LASTEXITCODE -ne 0) { throw "Start app gagal." }
 
@@ -223,6 +235,10 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
+                        # Reset permission SSH Key
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
@@ -248,6 +264,10 @@ pipeline {
                         if (params.RUN_MIGRATION) {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
+
+                                icacls $env:SSH_KEY /inheritance:r | Out-Null
+                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm app npm run db:migrate:prod"
                                 if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
                             '''
@@ -256,6 +276,10 @@ pipeline {
 
                     powershell '''
                         $ErrorActionPreference = 'Stop'
+
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans && docker image prune -f"
                         if ($LASTEXITCODE -ne 0) { throw "Deploy Multi-Replica dan pruning image gagal." }
                     '''
@@ -274,6 +298,10 @@ pipeline {
                 ]) {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
+
+                        # Reset permission SSH Key agar diterima OpenSSH Windows
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
@@ -296,9 +324,13 @@ pipeline {
                     if (params.RUN_MIGRATION) {
                         withCredentials([
                             sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
-                        ]){
+                        ]) {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
+
+                                # Reset permission SSH Key
+                                icacls $env:SSH_KEY /inheritance:r | Out-Null
+                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
 
                                 Start-Sleep -Seconds 15
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod"
@@ -318,6 +350,11 @@ pipeline {
                 ]) {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
+
+                        # Reset permission SSH Key sebelum loop dijalankan
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+
                         $success = $false
 
                         for ($i = 1; $i -le 12; $i++) {
@@ -328,6 +365,7 @@ pipeline {
                             }
                             if ($i -lt 12) { Start-Sleep -Seconds 5 }
                         }
+
                         if (-not $success) { throw "Health check aplikasi gagal." }
                     '''
                 }
