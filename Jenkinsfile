@@ -51,12 +51,16 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
                         
-                        # Fix permission private key file di Windows
-                        icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):(R)" | Out-Null
+                        # Ambil akun persis yang sedang menjalankan Jenkins (misal SYSTEM / Administrator)
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-                        # Tes koneksi SSH
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL $env:VM_USER@$env:VM_IP "echo 'Koneksi SSH ke VirtualBox berhasil.'"
+                        # Reset izin file key & berikan akses baca khusus ke akun Jenkins dan SYSTEM
+                        icacls $env:SSH_KEY /inheritance:r | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:(R)" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "SYSTEM:(R)" | Out-Null
+
+                        # Tes koneksi SSH (-q untuk menyembunyikan warning stderr)
+                        ssh -q -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL $env:VM_USER@$env:VM_IP "echo 'Koneksi SSH ke VirtualBox berhasil.'"
                         if ($LASTEXITCODE -ne 0) { throw "VM '$env:VM_IP:$env:VM_PORT' tidak dapat diakses melalui SSH." }
                     '''
                 }
