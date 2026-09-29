@@ -125,27 +125,24 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    powershell '''
-                        # Jangan gunakan 'Stop' agar log normal Docker tidak dianggap error oleh Windows
-                        $ErrorActionPreference = 'Continue'
+                    bat '''
+                        echo 1. Memulai proses Docker Build...
+                        docker build -t %IMAGE_TAG% -t %IMAGE_LATEST% .
+                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        Write-Host "1. Memulai proses Docker Build..."
-                        docker build -t $env:IMAGE_TAG -t $env:IMAGE_LATEST .
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal membuat (build) Docker Image. Pastikan Docker Engine/Desktop di Windows sudah berjalan dan file 'Dockerfile' ada di folder project." }
+                        echo 2. Login ke Docker Registry...
+                        echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
+                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        Write-Host "2. Login ke Docker Registry..."
-                        $env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal login ke Docker Registry. Cek kembali Username & Password di Jenkins Credential 'docker-registry-creds'." }
+                        echo 3. Memuat (Push) Image versi spesifik...
+                        docker push %IMAGE_TAG%
+                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        Write-Host "3. Memuat (Push) Image versi spesifik..."
-                        docker push $env:IMAGE_TAG
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal melakukan push tag spesifik ke Docker Registry." }
+                        echo 4. Memuat (Push) Image versi latest...
+                        docker push %IMAGE_LATEST%
+                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        Write-Host "4. Memuat (Push) Image versi latest..."
-                        docker push $env:IMAGE_LATEST
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal melakukan push tag latest ke Docker Registry." }
-
-                        Write-Host "Proses Build & Push Docker Berhasil!"
+                        echo Proses Build & Push Docker Berhasil!
                     '''
                 }
             }
