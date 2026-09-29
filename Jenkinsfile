@@ -142,7 +142,7 @@ pipeline {
                         docker push %IMAGE_LATEST%
                         if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        echo Proses Build & Push Docker Berhasil!
+                        echo Proses Build dan Push Docker Berhasil!
                     '''
                 }
             }
