@@ -126,19 +126,26 @@ pipeline {
                     )
                 ]) {
                     powershell '''
-                        $ErrorActionPreference = 'Stop'
+                        # Jangan gunakan 'Stop' agar log normal Docker tidak dianggap error oleh Windows
+                        $ErrorActionPreference = 'Continue'
 
+                        Write-Host "1. Memulai proses Docker Build..."
                         docker build -t $env:IMAGE_TAG -t $env:IMAGE_LATEST .
-                        if ($LASTEXITCODE -ne 0) { throw "Docker build gagal." }
+                        if ($LASTEXITCODE -ne 0) { throw "Gagal membuat (build) Docker Image. Pastikan Docker Engine/Desktop di Windows sudah berjalan dan file 'Dockerfile' ada di folder project." }
 
-                        echo $env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin
-                        if ($LASTEXITCODE -ne 0) { throw "Docker login gagal." }
+                        Write-Host "2. Login ke Docker Registry..."
+                        $env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin
+                        if ($LASTEXITCODE -ne 0) { throw "Gagal login ke Docker Registry. Cek kembali Username & Password di Jenkins Credential 'docker-registry-creds'." }
 
+                        Write-Host "3. Memuat (Push) Image versi spesifik..."
                         docker push $env:IMAGE_TAG
-                        if ($LASTEXITCODE -ne 0) { throw "Push tag spesifik gagal." }
+                        if ($LASTEXITCODE -ne 0) { throw "Gagal melakukan push tag spesifik ke Docker Registry." }
 
+                        Write-Host "4. Memuat (Push) Image versi latest..."
                         docker push $env:IMAGE_LATEST
-                        if ($LASTEXITCODE -ne 0) { throw "Push tag latest gagal." }
+                        if ($LASTEXITCODE -ne 0) { throw "Gagal melakukan push tag latest ke Docker Registry." }
+
+                        Write-Host "Proses Build & Push Docker Berhasil!"
                     '''
                 }
             }
