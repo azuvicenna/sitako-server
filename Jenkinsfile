@@ -161,9 +161,10 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        # Reset permission SSH Private Key agar diterima OpenSSH
+                        # Reset permission SSH Private Key dengan identitas user aktif Jenkins
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
@@ -191,8 +192,9 @@ pipeline {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
 
+                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                                 icacls $env:SSH_KEY /inheritance:r | Out-Null
-                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                                icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                                 Start-Sleep -Seconds 10
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml run --rm app npm run db:migrate:prod"
@@ -204,8 +206,9 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml up -d --remove-orphans app"
                         if ($LASTEXITCODE -ne 0) { throw "Start app gagal." }
@@ -236,8 +239,9 @@ pipeline {
                         $ErrorActionPreference = 'Stop'
 
                         # Reset permission SSH Key
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
@@ -265,8 +269,9 @@ pipeline {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
 
+                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                                 icacls $env:SSH_KEY /inheritance:r | Out-Null
-                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                                icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml run --rm app npm run db:migrate:prod"
                                 if ($LASTEXITCODE -ne 0) { throw "Migrasi database gagal." }
@@ -277,8 +282,9 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml up -d --scale app=$env:REPLICA_COUNT --remove-orphans && docker image prune -f"
                         if ($LASTEXITCODE -ne 0) { throw "Deploy Multi-Replica dan pruning image gagal." }
@@ -300,8 +306,9 @@ pipeline {
                         $ErrorActionPreference = 'Stop'
 
                         # Reset permission SSH Key agar diterima OpenSSH Windows
+                        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
-                        icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                        icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
@@ -329,8 +336,9 @@ pipeline {
                                 $ErrorActionPreference = 'Stop'
 
                                 # Reset permission SSH Key
+                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                                 icacls $env:SSH_KEY /inheritance:r | Out-Null
-                                icacls $env:SSH_KEY /grant:r "$($env:USERNAME):F" | Out-Null
+                                icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
                                 Start-Sleep -Seconds 15
                                 ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod"
