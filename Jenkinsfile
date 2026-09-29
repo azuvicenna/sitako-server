@@ -53,7 +53,6 @@ pipeline {
                         
                         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-                        # Path file dibungkus kutip ganda ("") untuk mengantisipasi spasi
                         icacls "$env:SSH_KEY" /inheritance:r | Out-Null
                         icacls "$env:SSH_KEY" /grant:r "${currentUser}:(R)" | Out-Null
                         icacls "$env:SSH_KEY" /grant:r "SYSTEM:(R)" | Out-Null
@@ -166,12 +165,12 @@ pipeline {
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no docker-compose.yml "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.yml"
+                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no ".\docker-compose.yml" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.yml"
                         if ($LASTEXITCODE -ne 0) { throw "Transfer docker-compose.yml gagal." }
 
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.yml stop app 2>/dev/null; docker compose -f docker-compose.yml rm -f app 2>/dev/null; true"
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r infra "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
+                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\infra" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
                         if ($LASTEXITCODE -ne 0) { throw "Transfer infra gagal." }
 
                         scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no "$env:SITAKO_ENV_FILE" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/.env"
@@ -242,12 +241,12 @@ pipeline {
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no docker-compose.prod.yml "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.prod.yml"
+                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no ".\docker-compose.prod.yml" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.prod.yml"
                         if ($LASTEXITCODE -ne 0) { throw "Transfer docker-compose.prod.yml gagal." }
 
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "cd '$env:VM_APP_DIR' && docker compose -f docker-compose.prod.yml stop app 2>/dev/null; docker compose -f docker-compose.prod.yml rm -f app 2>/dev/null; true"
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r infra "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
+                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\infra" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/infra"
                         if ($LASTEXITCODE -ne 0) { throw "Transfer infra gagal." }
 
                         scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no "$env:SITAKO_ENV_FILE" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/.env"
@@ -299,7 +298,6 @@ pipeline {
             }
             steps {
                 withCredentials([
-                    file(credentialsId: 'sitako-k8s-secret', variable: 'K8S_SECRET_FILE'),
                     usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                     sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
                 ]) {
@@ -313,20 +311,39 @@ pipeline {
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
+                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r ".\k8s" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/k8s"
+                        if ($LASTEXITCODE -ne 0) { throw "Transfer manifest K3s gagal." }
+
                         ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "docker save '$env:IMAGE_LATEST' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
-                        if ($LASTEXITCODE -ne 0) { throw "Import image ke containerd k3s gagal." }
+                        if ($LASTEXITCODE -ne 0) { throw "Import image ke K3s dan pruning image gagal." }
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no -r k8s "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/k8s"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer folder k8s gagal." }
+                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s'"
+                        if ($LASTEXITCODE -ne 0) { throw "Apply manifest K3s gagal." }
 
-                        scp -P $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no "$env:K8S_SECRET_FILE" "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/k8s/sitako-secret.yml"
-                        if ($LASTEXITCODE -ne 0) { throw "Transfer sitako-secret.yml gagal." }
-
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "chmod 600 '$env:VM_APP_DIR/k8s/sitako-secret.yml'"
-                        
-                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "kubectl apply -f '$env:VM_APP_DIR/k8s/sitako-secret.yml' && kubectl apply -f '$env:VM_APP_DIR/k8s/' && kubectl rollout restart deployment/sitako-backend"
-                        if ($LASTEXITCODE -ne 0) { throw "Gagal apply k8s resources." }
+                        ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl rollout restart deploy/sitako-app -n sitako && sudo k3s kubectl rollout status deploy/sitako-app -n sitako --timeout=120s"
+                        if ($LASTEXITCODE -ne 0) { throw "Rollout restart K3s gagal." }
                     '''
+                }
+
+                script {
+                    if (params.RUN_MIGRATION) {
+                        withCredentials([
+                            sshUserPrivateKey(credentialsId: 'vbox-ssh-key', keyFileVariable: 'SSH_KEY')
+                        ]) {
+                            powershell '''
+                                $ErrorActionPreference = 'Stop'
+
+                                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+                                icacls "$env:SSH_KEY" /inheritance:r | Out-Null
+                                icacls "$env:SSH_KEY" /grant:r "${currentUser}:F" | Out-Null
+
+                                Start-Sleep -Seconds 15
+                                ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl exec -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod"
+
+                                if ($LASTEXITCODE -ne 0) { throw "Migrasi database K3s gagal." }
+                            '''
+                        }
+                    }
                 }
             }
         }
@@ -342,29 +359,18 @@ pipeline {
                         icacls "$env:SSH_KEY" /inheritance:r | Out-Null
                         icacls "$env:SSH_KEY" /grant:r "$($env:USERNAME):F" | Out-Null
 
-                        Start-Sleep -Seconds 15
-
-                        $retries = 0
-                        $maxRetries = 10
                         $success = $false
 
-                        while ($retries -lt $maxRetries -and -not $success) {
-                            Write-Host "Mengecek status aplikasi... (Percobaan $($retries + 1) dari $maxRetries)"
-                            $output = ssh -q -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "curl -s http://localhost:8080/health"
-                            
-                            if ($output -match "OK" -or $output -match "UP") {
-                                Write-Host "Health check berhasil!"
+                        for ($i = 1; $i -le 12; $i++) {
+                            ssh -p $env:VM_PORT -i "$env:SSH_KEY" -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "curl -fsS --max-time 5 http://127.0.0.1:8080/"
+                            if ($LASTEXITCODE -eq 0) {
                                 $success = $true
-                            } else {
-                                Write-Host "Health check gagal. Menunggu 10 detik sebelum mencoba lagi..."
-                                Start-Sleep -Seconds 10
-                                $retries++
+                                break
                             }
+                            if ($i -lt 12) { Start-Sleep -Seconds 5 }
                         }
 
-                        if (-not $success) {
-                            throw "Aplikasi gagal berjalan atau tidak merespons setelah $maxRetries percobaan."
-                        }
+                        if (-not $success) { throw "Health check aplikasi gagal." }
                     '''
                 }
             }
@@ -372,14 +378,14 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs()
-        }
         success {
-            echo "Pipeline SITAKO ($DEPLOY_MODE) selesai dengan sukses."
+            echo "Deploy ${params.DEPLOY_MODE} berhasil (build #${env.BUILD_NUMBER})"
         }
         failure {
-            echo "Pipeline SITAKO ($DEPLOY_MODE) gagal."
+            echo "Pipeline gagal pada mode ${params.DEPLOY_MODE}."
+        }
+        always {
+            cleanWs()
         }
     }
 }
