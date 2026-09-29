@@ -161,12 +161,11 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        # Reset permission SSH Private Key dengan identitas user aktif Jenkins
                         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
                         icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
+                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
                         scp -P $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no docker-compose.yml "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.yml"
@@ -238,12 +237,11 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        # Reset permission SSH Key
                         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
                         icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
+                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
                         scp -P $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no docker-compose.prod.yml "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/docker-compose.prod.yml"
@@ -305,18 +303,17 @@ pipeline {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
 
-                        # Reset permission SSH Key agar diterima OpenSSH Windows
                         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                         icacls $env:SSH_KEY /inheritance:r | Out-Null
                         icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
 
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:APP_NAME:latest' && docker logout"
+                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker logout"
                         if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
 
                         scp -P $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no -r k8s "$env:VM_USER@$env:VM_IP:$env:VM_APP_DIR/k8s"
                         if ($LASTEXITCODE -ne 0) { throw "Transfer manifest K3s gagal." }
 
-                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "docker save '$env:APP_NAME:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
+                        ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "docker save '$env:IMAGE_LATEST' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
                         if ($LASTEXITCODE -ne 0) { throw "Import image ke K3s dan pruning image gagal." }
 
                         ssh -p $env:VM_PORT -i $env:SSH_KEY -o StrictHostKeyChecking=no $env:VM_USER@$env:VM_IP "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s'"
@@ -335,7 +332,6 @@ pipeline {
                             powershell '''
                                 $ErrorActionPreference = 'Stop'
 
-                                # Reset permission SSH Key
                                 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
                                 icacls $env:SSH_KEY /inheritance:r | Out-Null
                                 icacls $env:SSH_KEY /grant:r "${currentUser}:F" | Out-Null
