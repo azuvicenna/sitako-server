@@ -215,7 +215,7 @@ pipeline {
 
     post {
         always {
-            cleanWs()
+            deleteDir()
         }
         success {
             echo "Pipeline SITAKO ($DEPLOY_MODE) selesai dengan sukses."
