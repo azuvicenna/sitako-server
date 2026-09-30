@@ -69,7 +69,6 @@ pipeline {
             }
         }
 
-        /*
         stage('Lint') {
             steps {
                 powershell '''
@@ -92,7 +91,6 @@ pipeline {
                 '''
             }
         }
-        */
 
         stage('Build') {
             steps {
@@ -202,8 +200,8 @@ pipeline {
                         $healthy = $false
                         for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
                             Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
-                            $output = & ssh -q -p $env:VM_PORT @sshOptions $remote "curl -s http://localhost:8080/health"
-                            $healthy = "$output" -match 'OK|UP'
+                            & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf -o /dev/null http://localhost:8080/"
+                            $healthy = $LASTEXITCODE -eq 0
                             if (-not $healthy) { Start-Sleep -Seconds 10 }
                         }
 
