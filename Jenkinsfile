@@ -102,6 +102,20 @@ pipeline {
             }
         }
 
+        stage('Debug Docker') {
+            steps {
+                bat '''
+                    whoami
+                    echo DOCKER_CONFIG=%DOCKER_CONFIG%
+                    echo USERPROFILE=%USERPROFILE%
+                    docker context ls
+                    type "%USERPROFILE%\\.docker\\config.json"
+                    docker logout
+                    docker pull node:22-bookworm-slim
+                '''
+            }
+        }
+
         stage('Docker Build & Push') {
             steps {
                 withCredentials([dockerCredentials()]) {
