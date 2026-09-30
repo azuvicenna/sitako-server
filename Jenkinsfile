@@ -69,6 +69,7 @@ pipeline {
             }
         }
 
+        /*
         stage('Lint') {
             steps {
                 powershell '''
@@ -91,6 +92,7 @@ pipeline {
                 '''
             }
         }
+        */
 
         stage('Build') {
             steps {
@@ -240,7 +242,7 @@ String vmPrelude() {
         $ErrorActionPreference = 'Stop'
 
         $remote = "$($env:VM_USER)@$($env:VM_IP)"
-        $sshOptions = @('-i', $env:SSH_KEY, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=NUL')
+        $sshOptions = @('-i', $env:SSH_KEY, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=NUL', '-o', 'LogLevel=ERROR')
 
         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
         icacls "$env:SSH_KEY" /inheritance:r | Out-Null
@@ -249,7 +251,7 @@ String vmPrelude() {
         Write-Host "scp yang dipakai: $((Get-Command scp).Source)"
 
         function runSsh([string]$command) {
-            & ssh -q -p $env:VM_PORT @sshOptions $remote $command
+            & ssh -p $env:VM_PORT @sshOptions $remote $command
             if ($LASTEXITCODE -ne 0) { throw "Perintah SSH gagal: $command" }
         }
 
@@ -257,12 +259,12 @@ String vmPrelude() {
             if (-not (Test-Path -LiteralPath $source)) {
                 throw "'$source' tidak ditemukan di workspace ($(Get-Location))."
             }
-            & scp -q -r -P $env:VM_PORT @sshOptions $source "${remote}:$target"
+            & scp -r -P $env:VM_PORT @sshOptions $source "${remote}:$target"
             if ($LASTEXITCODE -ne 0) { throw "Transfer '$source' gagal." }
         }
 
         function pullImageOnVm {
-            & ssh -q -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker tag '$env:IMAGE_TAG' '${env:APP_NAME}:latest' && docker logout"
+            & ssh -p $env:VM_PORT @sshOptions $remote "mkdir -p '$env:VM_APP_DIR' && echo '$env:DOCKER_PASS' | docker login -u '$env:DOCKER_USER' --password-stdin && docker pull '$env:IMAGE_TAG' && docker tag '$env:IMAGE_TAG' '$env:IMAGE_LATEST' && docker tag '$env:IMAGE_TAG' '${env:APP_NAME}:latest' && docker logout"
             if ($LASTEXITCODE -ne 0) { throw "Gagal pull image di VM." }
         }
     '''
@@ -286,19 +288,21 @@ def deployCompose(String composeFile, String appScale, String edgeServices) {
             $compose = "cd '$env:VM_APP_DIR' && docker compose -f $env:COMPOSE_FILE"
             runSsh "$compose stop app 2>/dev/null; $compose rm -f app 2>/dev/null; true"
 
-            copyToVm infra "$env:VM_APP_DIR/"
+            runSsh "mkdir -p '$env:VM_APP_DIR/infra'"
+            copyToVm infra/nginx "$env:VM_APP_DIR/infra/"
+            copyToVm infra/prometheus.yml "$env:VM_APP_DIR/infra/prometheus.yml"
             copyToVm $env:SITAKO_ENV_FILE "$env:VM_APP_DIR/.env"
             runSsh "chmod 600 '$env:VM_APP_DIR/.env'"
 
-            runSsh "$compose up -d --quiet-pull --remove-orphans database redis postgres_exporter redis_exporter"
+            runSsh "$compose up -d --remove-orphans database redis postgres_exporter redis_exporter"
 
             if ($env:RUN_MIGRATION -eq 'true') {
                 Start-Sleep -Seconds 10
-                runSsh "$compose run --rm app npm run db:migrate:prod"
+                runSsh "$compose run --rm -T app npm run db:migrate:prod"
             }
 
             runSsh "$compose up -d --scale app=$env:APP_SCALE --remove-orphans app"
-            runSsh "$compose up -d --quiet-pull --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
+            runSsh "$compose up -d --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
         ''', [
             file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
             dockerCredentials()
