@@ -106,19 +106,19 @@ pipeline {
             steps {
                 withCredentials([dockerCredentials()]) {
                     bat '''
-                        echo 1. Memulai proses Docker Build...
-                        docker build -t %IMAGE_TAG% -t %IMAGE_LATEST% .
-                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
-
-                        echo 2. Login ke Docker Registry...
+                        echo 1. Login ke Docker Registry...
                         echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
                         if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        echo 3. Memuat (Push) Image versi spesifik...
+                        echo 2. Memulai proses Docker Build...
+                        docker build -t %IMAGE_TAG% -t %IMAGE_LATEST% .
+                        if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
+
+                        echo 3. Push image versi spesifik...
                         docker push %IMAGE_TAG%
                         if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-                        echo 4. Memuat (Push) Image versi latest...
+                        echo 4. Push image versi latest...
                         docker push %IMAGE_LATEST%
                         if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
