@@ -194,20 +194,23 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    onVm('''
-                        Start-Sleep -Seconds 15
+                    def healthPort = params.DEPLOY_MODE == 'docker-multi-replica' ? '80' : '8080'
+                    withEnv(["HEALTH_PORT=${healthPort}"]) {
+                        onVm('''
+                            Start-Sleep -Seconds 45
 
-                        $healthy = $false
-                        for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
-                            Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
-                            & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf --max-time 5 -o /dev/null http://localhost:8080/"
-                            $healthy = $LASTEXITCODE -eq 0
-                            if (-not $healthy) { Start-Sleep -Seconds 10 }
-                        }
+                            $healthy = $false
+                            for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
+                                Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
+                                & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf --max-time 5 -o /dev/null http://localhost:$env:HEALTH_PORT/"
+                                $healthy = $LASTEXITCODE -eq 0
+                                if (-not $healthy) { Start-Sleep -Seconds 10 }
+                            }
 
-                        if (-not $healthy) { throw "Aplikasi gagal berjalan atau tidak merespons setelah 10 percobaan." }
-                        Write-Host "Health check berhasil!"
-                    ''')
+                            if (-not $healthy) { throw "Aplikasi gagal berjalan atau tidak merespons setelah 10 percobaan." }
+                            Write-Host "Health check berhasil!"
+                        ''')
+                    }
                 }
             }
         }
