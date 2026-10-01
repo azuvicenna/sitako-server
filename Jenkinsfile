@@ -277,7 +277,14 @@ def onVm(String script, List extraCredentials = []) {
 
 // Deploy standalone dan multi-replica sama, hanya beda compose file, jumlah replika, dan service tambahan.
 def deployCompose(String composeFile, String appScale, String edgeServices) {
-    withEnv(["COMPOSE_FILE=${composeFile}", "APP_SCALE=${appScale}", "EDGE_SERVICES=${edgeServices}"]) {
+    def isStandalone = composeFile == 'docker-compose.yml'
+    withEnv([
+        "COMPOSE_FILE=${composeFile}",
+        "APP_SCALE=${appScale}",
+        "EDGE_SERVICES=${edgeServices}",
+        "OTHER_COMPOSE_FILE=${isStandalone ? 'docker-compose.prod.yml' : 'docker-compose.yml'}",
+        "OTHER_NETWORK=${isStandalone ? 'sitako-network' : 'sitako-server_backend'}"
+    ]) {
         onVm('''
             pullImageOnVm
 
@@ -291,6 +298,10 @@ def deployCompose(String composeFile, String appScale, String edgeServices) {
             copyToVm infra/prometheus.yml "$env:VM_APP_DIR/infra/prometheus.yml"
             copyToVm $env:SITAKO_ENV_FILE "$env:VM_APP_DIR/.env"
             runSsh "chmod 600 '$env:VM_APP_DIR/.env'"
+
+            # Pindah mode: matikan stack mode lain jika network-nya masih ada (volume tetap aman)
+            copyToVm $env:OTHER_COMPOSE_FILE "$env:VM_APP_DIR/$env:OTHER_COMPOSE_FILE"
+            runSsh "cd '$env:VM_APP_DIR' && if docker network inspect $env:OTHER_NETWORK >/dev/null 2>&1; then docker compose -f $env:OTHER_COMPOSE_FILE down; fi"
 
             runSsh "$compose up -d --remove-orphans database redis postgres_exporter redis_exporter"
 
