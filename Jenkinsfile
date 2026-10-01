@@ -311,7 +311,8 @@ def deployCompose(String composeFile, String appScale, String edgeServices) {
             }
 
             runSsh "$compose up -d --scale app=$env:APP_SCALE --remove-orphans app"
-            runSsh "$compose up -d --remove-orphans $env:EDGE_SERVICES && docker image prune -f"
+            # --no-deps: jangan sentuh app (jumlah replika tetap); --force-recreate: nginx resolve ulang IP app yang baru
+            runSsh "$compose up -d --no-deps --force-recreate $env:EDGE_SERVICES && docker image prune -f"
         ''', [
             file(credentialsId: 'sitako-env', variable: 'SITAKO_ENV_FILE'),
             dockerCredentials()
