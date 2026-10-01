@@ -200,7 +200,7 @@ pipeline {
                         $healthy = $false
                         for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
                             Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
-                            & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf -o /dev/null http://localhost:8080/"
+                            & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf --max-time 5 -o /dev/null http://localhost:8080/"
                             $healthy = $LASTEXITCODE -eq 0
                             if (-not $healthy) { Start-Sleep -Seconds 10 }
                         }
