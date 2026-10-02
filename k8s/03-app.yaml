@@ -6,7 +6,6 @@ metadata:
   labels:
     app: sitako-app
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: sitako-app
