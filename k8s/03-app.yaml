@@ -23,10 +23,10 @@ spec:
             - containerPort: 8080
               name: http
           envFrom:
-            - configMapRef:
-                name: sitako-config
             - secretRef:
                 name: sitako-secret
+            - configMapRef:
+                name: sitako-config
           resources:
             requests:
               cpu: 100m

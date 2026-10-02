@@ -167,7 +167,7 @@ pipeline {
             }
         }
 
-        stage('Deploy (K3s)') {
+                stage('Deploy (K3s)') {
             when {
                 expression { params.DEPLOY_MODE == 'k3s' }
             }
@@ -176,16 +176,28 @@ pipeline {
                     onVm('''
                         pullImageOnVm
 
-                        runSsh "docker save '$env:IMAGE_LATEST' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
+                        # 1. Save image lokal dan import ke K3s containerd
+                        runSsh "docker save '${env:APP_NAME}:latest' -o '$env:VM_APP_DIR/$env:APP_NAME.tar' && sudo k3s ctr -n k8s.io images import '$env:VM_APP_DIR/$env:APP_NAME.tar' && rm -f '$env:VM_APP_DIR/$env:APP_NAME.tar' && docker image prune -f"
 
+                        # 2. Copy manifest, lalu buat namespace dulu
                         copyToVm k8s "$env:VM_APP_DIR/"
-                        copyToVm $env:K8S_SECRET_FILE "$env:VM_APP_DIR/k8s/sitako-secret.yml"
-                        runSsh "chmod 600 '$env:VM_APP_DIR/k8s/sitako-secret.yml'"
+                        runSsh "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s/00-namespace-and-config.yaml'"
 
-                        # Apply semua manifest k8s lalu restart deployment sitako-app dengan namespace sitako
-                        runSsh "kubectl apply -f '$env:VM_APP_DIR/k8s/' && kubectl rollout restart deployment/sitako-app -n sitako"
+                        # 3. Buat/Update Secret dari .env
+                        copyToVm $env:DOTENV_FILE "$env:VM_APP_DIR/.env.k8s"
+                        runSsh "chmod 600 '$env:VM_APP_DIR/.env.k8s'"
+                        runSsh "sudo k3s kubectl create secret generic sitako-secret --from-env-file='$env:VM_APP_DIR/.env.k8s' -n sitako --dry-run=client -o yaml | sudo k3s kubectl apply -f -"
+
+                        # 4. Apply semua manifest, restart, tunggu sampai siap
+                        runSsh "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s/' && sudo k3s kubectl rollout restart deployment/sitako-app -n sitako"
+                        runSsh "sudo k3s kubectl rollout status deployment/sitako-app -n sitako --timeout=300s"
+
+                        # 5. Migrasi database
+                        if ($env:RUN_MIGRATION -eq 'true') {
+                            runSsh "sudo k3s kubectl exec -n sitako deploy/sitako-app -- npm run db:migrate:prod"
+                        }
                     ''', [
-                        file(credentialsId: 'sitako-k8s-secret', variable: 'K8S_SECRET_FILE'),
+                        file(credentialsId: 'sitako-env', variable: 'DOTENV_FILE'),
                         dockerCredentials()
                     ])
                 }

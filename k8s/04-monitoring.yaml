@@ -51,8 +51,18 @@ spec:
         - name: postgres-exporter
           image: quay.io/prometheuscommunity/postgres-exporter:latest
           env:
-            - name: DATA_SOURCE_NAME
-              value: "postgresql://postgres:password@database:5432/mydb?sslmode=disable"
+            - name: DATA_SOURCE_URI
+              value: "database:5432/mydb?sslmode=disable"
+            - name: DATA_SOURCE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sitako-secret
+                  key: POSTGRES_USER
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: sitako-secret
+                  key: POSTGRES_PASSWORD
           ports:
             - containerPort: 9187
               name: metrics
