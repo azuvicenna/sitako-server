@@ -34,29 +34,3 @@ data:
   S3_ENDPOINT: "https://account-id.r2.cloudflarestorage.com"
   S3_BUCKET_NAME: "sitako-bucket"
   PUBLIC_STORAGE_URL: "https://pub-xxxxxx.r2.dev"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sitako-secret
-  namespace: sitako
-type: Opaque
-# Catatan: stringData memungkinkan Anda mengisi nilai teks biasa.
-# K3s/Kubernetes akan otomatis mengonversinya menjadi Base64 saat di-apply.
-stringData:
-  POSTGRES_USER: "postgres"
-  POSTGRES_PASSWORD: "password"
-
-  JWT_SECRET: "ganti-dengan-secret-jwt-yang-kuat"
-  CAPTCHA_SECRET: "ganti-dengan-secret-captcha"
-
-  TRIPAY_API_KEY: ""
-  TRIPAY_PRIVATE_KEY: ""
-  TRIPAY_MERCHANT_CODE: ""
-
-  MAIL_USER: "email-kamu@gmail.com"
-  MAIL_PASS: "app-password-kamu"
-  MAIL_FROM: "email-kamu@gmail.com"
-
-  S3_ACCESS_KEY_ID: ""
-  S3_SECRET_ACCESS_KEY: ""

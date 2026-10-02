@@ -182,7 +182,8 @@ pipeline {
                         copyToVm $env:K8S_SECRET_FILE "$env:VM_APP_DIR/k8s/sitako-secret.yml"
                         runSsh "chmod 600 '$env:VM_APP_DIR/k8s/sitako-secret.yml'"
 
-                        runSsh "kubectl apply -f '$env:VM_APP_DIR/k8s/sitako-secret.yml' && kubectl apply -f '$env:VM_APP_DIR/k8s/' && kubectl rollout restart deployment/sitako-backend"
+                        # Apply semua manifest k8s lalu restart deployment sitako-app dengan namespace sitako
+                        runSsh "kubectl apply -f '$env:VM_APP_DIR/k8s/' && kubectl rollout restart deployment/sitako-app -n sitako"
                     ''', [
                         file(credentialsId: 'sitako-k8s-secret', variable: 'K8S_SECRET_FILE'),
                         dockerCredentials()
@@ -194,15 +195,16 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    def healthPort = params.DEPLOY_MODE == 'docker-multi-replica' ? '80' : '8080'
-                    withEnv(["HEALTH_PORT=${healthPort}"]) {
+                    def healthPort = (params.DEPLOY_MODE == 'docker-multi-replica' || params.DEPLOY_MODE == 'k3s') ? '80' : '8080'
+                    def healthPath = params.DEPLOY_MODE == 'k3s' ? '/api' : '/'
+                    withEnv(["HEALTH_PORT=${healthPort}", "HEALTH_PATH=${healthPath}"]) {
                         onVm('''
-                            Start-Sleep -Seconds 45
+                            Start-Sleep -Seconds 20
 
                             $healthy = $false
                             for ($attempt = 1; $attempt -le 10 -and -not $healthy; $attempt++) {
                                 Write-Host "Mengecek status aplikasi... (Percobaan $attempt dari 10)"
-                                & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf --max-time 5 -o /dev/null http://localhost:$env:HEALTH_PORT/"
+                                & ssh -p $env:VM_PORT @sshOptions $remote "curl -sf --max-time 5 -o /dev/null http://localhost:$env:HEALTH_PORT$env:HEALTH_PATH"
                                 $healthy = $LASTEXITCODE -eq 0
                                 if (-not $healthy) { Start-Sleep -Seconds 10 }
                             }
