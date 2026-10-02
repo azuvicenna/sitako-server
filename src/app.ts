@@ -59,6 +59,10 @@ app.get('/', (_req: Request, res: Response): void => {
 
 app.get('/metrics', metricsHandler);
 
+app.get('/api/health', (_req: Request, res: Response): void => {
+  res.sendStatus(200);
+});
+
 app.use('/api', routes);
 
 app.use((err: Error, _req: Request, res: Response, next: NextFunction): void => {

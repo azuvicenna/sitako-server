@@ -167,7 +167,7 @@ pipeline {
             }
         }
 
-                stage('Deploy (K3s)') {
+        stage('Deploy (K3s)') {
             when {
                 expression { params.DEPLOY_MODE == 'k3s' }
             }
@@ -188,9 +188,10 @@ pipeline {
                         runSsh "chmod 600 '$env:VM_APP_DIR/.env.k8s'"
                         runSsh "sudo k3s kubectl create secret generic sitako-secret --from-env-file='$env:VM_APP_DIR/.env.k8s' -n sitako --dry-run=client -o yaml | sudo k3s kubectl apply -f -"
 
-                        # 4. Apply semua manifest, restart, tunggu sampai siap
+                        # 4. Apply semua manifest, restart, tunggu app dan database siap
                         runSsh "sudo k3s kubectl apply -f '$env:VM_APP_DIR/k8s/' && sudo k3s kubectl rollout restart deployment/sitako-app -n sitako"
                         runSsh "sudo k3s kubectl rollout status deployment/sitako-app -n sitako --timeout=300s"
+                        runSsh "sudo k3s kubectl rollout status statefulset/database -n sitako --timeout=300s"
 
                         # 5. Migrasi database
                         if ($env:RUN_MIGRATION -eq 'true') {
@@ -208,7 +209,7 @@ pipeline {
             steps {
                 script {
                     def healthPort = (params.DEPLOY_MODE == 'docker-multi-replica' || params.DEPLOY_MODE == 'k3s') ? '80' : '8080'
-                    def healthPath = params.DEPLOY_MODE == 'k3s' ? '/api' : '/'
+                    def healthPath = params.DEPLOY_MODE == 'k3s' ? '/api/health' : '/'
                     withEnv(["HEALTH_PORT=${healthPort}", "HEALTH_PATH=${healthPath}"]) {
                         onVm('''
                             Start-Sleep -Seconds 20
