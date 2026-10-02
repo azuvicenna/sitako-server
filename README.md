@@ -19,14 +19,24 @@ Berikut adalah beberapa teknologi utama yang digunakan beserta fungsinya:
 - **Jest & Supertest**: Framework testing untuk pengujian otomatis (Unit, Integration, dan Feature tests).
 - **k6**: Framework modern untuk load testing dan performance profiling API.
 - **Prometheus & Exporters**: Monitoring stack untuk mengumpulkan dan memvisualisasikan metrics performa aplikasi, PostgreSQL, dan Redis.
+- **OpenTelemetry**: Standar observabilitas (APM) open-source untuk distributed tracing dan metrics telemetry yang menginstrumentasi request HTTP, database queries (PostgreSQL), cache (Redis), dan Winston logging secara otomatis.
 - **Docker & Docker Compose**: Mengemas aplikasi beserta ekosistem pendukungnya (PostgreSQL, Redis, Exporters, dan Prometheus) ke dalam container.
-- **Jenkins**: Tools CI/CD untuk mengotomatisasi pipeline mulai dari build, test, hingga proses deploy langsung ke Virtual Machine (menggunakan Multipass).
+- **Jenkins**: Tools CI/CD untuk mengotomatisasi pipeline mulai dari build, test, hingga proses deploy langsung ke Virtual Machine (VirtualBox / Multipass).
 
 ## Daftar Library Dependencies
 
 Berikut adalah rincian fungsi dari masing-masing dependencies utama yang terdaftar di `package.json`:
 
 - **`@aws-sdk/client-s3`**: Library official AWS SDK untuk berinteraksi dengan S3-compatible storage (digunakan untuk Cloudflare R2).
+- **`@opentelemetry/api`**: API inti OpenTelemetry untuk distributed tracing, metrics, context propagation, dan pembuatan custom spans.
+- **`@opentelemetry/auto-instrumentations-node`**: Bundle instrumentasi otomatis untuk framework & library Node.js populer (Express, HTTP, PostgreSQL, Redis, Winston, AWS SDK).
+- **`@opentelemetry/exporter-metrics-otlp-http`**: Exporter OpenTelemetry untuk mengirim data metrics ke OTLP receiver (Collector) via HTTP.
+- **`@opentelemetry/exporter-trace-otlp-http`**: Exporter OpenTelemetry untuk mengekspor distributed traces ke APM backend (Jaeger, Tempo, SigNoz) via OTLP HTTP.
+- **`@opentelemetry/resources`**: Pengelola metadata dan atribut entitas service (seperti nama service, versi, environment) untuk data telemetri.
+- **`@opentelemetry/sdk-metrics`**: Implementasi OpenTelemetry Metrics SDK dan metric readers (`PeriodicExportingMetricReader`).
+- **`@opentelemetry/sdk-node`**: SDK utama OpenTelemetry untuk Node.js yang mengorkestrasi siklus hidup tracing, metrics, dan instrumentations.
+- **`@opentelemetry/sdk-trace-node`**: Implementasi OpenTelemetry Tracing SDK untuk runtime Node.js (termasuk `ConsoleSpanExporter` untuk debugging lokal).
+- **`@opentelemetry/semantic-conventions`**: Definisi standar penamaan atribut telemetri (Semantic Conventions) seperti nama layanan, HTTP request, dan status code.
 - **`bcrypt`**: Digunakan untuk melakukan _hashing_ password pengguna agar aman di database.
 - **`cookie-parser`**: Middleware Express untuk memparsing cookie dari header HTTP.
 - **`cors`**: Middleware keamanan untuk mengatur kebijakan Cross-Origin Resource Sharing agar frontend bisa mengakses API.
@@ -87,6 +97,7 @@ Perintah khusus untuk database (Drizzle ORM & Seeder):
 - `npm run db:studio` : Membuka antarmuka web GUI Drizzle Studio untuk melihat dan mengelola isi database.
 
 > **Kredensial Akun Pustakawan Default (hasil seeder):**
+>
 > - **NIP:** `198001012005011001`
 > - **Password:** `admin123`
 
@@ -130,7 +141,7 @@ Pengujian otomatis dilakukan menggunakan Jest dan Supertest. Variabel lingkungan
 
 ### Load Testing (k6)
 
-Tersedia 9 skenario pengujian beban (*load & performance testing*) menggunakan k6:
+Tersedia 9 skenario pengujian beban (_load & performance testing_) menggunakan k6:
 
 - `npm run k6:smoke` : Smoke test cepat untuk verifikasi kesehatan dasar endpoint API.
 - `npm run k6:login` : Stress test alur login dan verifikasi captcha/autentikasi pengguna.
@@ -147,7 +158,9 @@ Tersedia 9 skenario pengujian beban (*load & performance testing*) menggunakan k
 Tersedia 2 mode deployment Docker:
 
 #### 1. Mode Standalone (Single Instance)
+
 Cocok untuk pengembangan atau server dengan beban standar:
+
 - Menjalankan seluruh container di background:
   ```bash
   docker compose up -d
@@ -170,7 +183,9 @@ Cocok untuk pengembangan atau server dengan beban standar:
   ```
 
 #### 2. Mode Production dengan Nginx Load Balancer (Multi-Replica)
+
 Menggunakan reverse proxy Nginx di port 80 dan mendukung horizontal scaling kontainer `app`:
+
 - Menjalankan dengan 2 replika backend `app`:
   ```bash
   docker compose -f docker-compose.prod.yml up -d --scale app=2
@@ -207,34 +222,41 @@ Folder `k8s/` menyediakan manifest lengkap untuk deployment ke cluster Kubernete
 Mode ini direkomendasikan untuk pengembangan dan pengujian Kubernetes secara langsung di laptop (Windows/macOS/Linux) menggunakan driver Docker:
 
 1. **Nyalakan Minikube Cluster & Aktifkan Ingress:**
+
    ```bash
    minikube start --driver=docker
    minikube addons enable ingress
    ```
 
 2. **Build Image Backend & Load ke Minikube:**
+
    ```bash
    docker build -t sitako-server:latest .
    minikube image load sitako-server:latest
    ```
-   *(Tips: Anda juga bisa me-load image base PostgreSQL jika koneksi lambat: `minikube image load postgres:18-alpine`)*
 
-3. **Deploy Seluruh Manifest (Namespace, Config, Postgres, Redis, App, Monitoring):**
+   _(Tips: Anda juga bisa me-load image base PostgreSQL jika koneksi lambat: `minikube image load postgres:18-alpine`)_
+
+3. **Deploy Seluruh Manifest (Namespace, Config, Postgres, Redis, App, Monitoring, HPA):**
+
    ```bash
    kubectl apply -f k8s/00-namespace-and-config.yaml
    kubectl apply -f k8s/01-postgres.yaml
    kubectl apply -f k8s/02-redis.yaml
    kubectl apply -f k8s/03-app.yaml
    kubectl apply -f k8s/04-monitoring.yaml
+   kubectl apply -f k8s/05-hpa.yaml
    ```
 
 4. **Eksekusi Migrasi Database & Seeder Akun Awal di Pod:**
+
    ```bash
    kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
    kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:seed:prod
    ```
 
 5. **Mengecek Status Seluruh Resource:**
+
    ```bash
    kubectl get pods,pvc,svc,ingress -n sitako
    ```
@@ -244,12 +266,12 @@ Mode ini direkomendasikan untuk pengembangan dan pengujian Kubernetes secara lan
      ```bash
      minikube service app -n sitako
      ```
-     *(Perintah ini akan membuat tunnel dan otomatis membuka browser ke URL aplikasi)*.
+     _(Perintah ini akan membuat tunnel dan otomatis membuka browser ke URL aplikasi)_.
    - **Metode Ingress (Port 80):**
      ```bash
      minikube tunnel
      ```
-     *(Setelah tunnel aktif di satu terminal, akses langsung via `http://localhost/` di browser)*.
+     _(Setelah tunnel aktif di satu terminal, akses langsung via `http://localhost/` di browser)_.
 
 7. **Mengakses Dashboard Monitoring Prometheus:**
    - **Metode Praktis (Otomatis Buka Browser):**
@@ -260,7 +282,7 @@ Mode ini direkomendasikan untuk pengembangan dan pengujian Kubernetes secara lan
      ```bash
      kubectl port-forward svc/prometheus 9091:9091 -n sitako
      ```
-     *(Buka di browser: `http://localhost:9091/`)*
+     _(Buka di browser: `http://localhost:9091/`)_
 
 8. **Perintah Perawatan / Utility Minikube:**
    - Membuka antarmuka grafis Web Dashboard:
@@ -288,30 +310,32 @@ Untuk deployment di lingkungan K3s (misalnya di Virtual Machine Multipass):
    ```bash
    sudo k3s ctr -n k8s.io images import sitako-server.tar
    ```
-2. **Deploy Manifests (Namespace, Postgres, Redis, App, Monitoring):**
+2. **Deploy Manifests (Namespace, Postgres, Redis, App, Monitoring, HPA):**
    ```bash
    kubectl apply -f k8s/00-namespace-and-config.yaml
    kubectl apply -f k8s/01-postgres.yaml
    kubectl apply -f k8s/02-redis.yaml
    kubectl apply -f k8s/03-app.yaml
    kubectl apply -f k8s/04-monitoring.yaml
+   kubectl apply -f k8s/05-hpa.yaml
    ```
 3. **Eksekusi Migrasi Skema & Seeder Akun Awal di Pod:**
    ```bash
    kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:migrate:prod
    kubectl exec -it -n sitako deploy/sitako-app -c backend -- npm run db:seed:prod
    ```
-4. **Melihat Status Pod & Ingress Traefik:**
+4. **Melihat Status Pod, Ingress Traefik & HPA:**
    ```bash
    kubectl get pods,svc,ingress -n sitako
+   kubectl get hpa -n sitako
    ```
-
 
 ### CI/CD dengan Jenkins
 
 Aplikasi ini sudah dipasang otomatisasi melalui `Jenkinsfile` dengan dukungan parameter pipeline dinamis (`Build with Parameters`). Anda dapat memilih target deployment sesuai kebutuhan:
 
 #### Parameter Pipeline:
+
 - **`DEPLOY_MODE`** (Pilihan target deployment):
   - `docker-standalone`: Menjalankan kontainer tunggal menggunakan `docker-compose.yml` (port `8080`).
   - `docker-multi-replica`: Menjalankan kontainer multi-replika menggunakan `docker-compose.prod.yml` dengan Nginx Load Balancer (port `80`).
@@ -320,16 +344,20 @@ Aplikasi ini sudah dipasang otomatisasi melalui `Jenkinsfile` dengan dukungan pa
 - **`RUN_MIGRATION`**: Menjalankan migrasi database otomatis (`npm run db:migrate:prod`) setelah deployment berhasil (default: `true`).
 
 #### Tahapan Pipeline:
-1. **Checkout**: Mengambil kode sumber dari repository Git.
-2. **Install Dependencies**: Menjalankan `npm ci`.
-3. **Lint & Test**: Menjalankan pengujian otomatis (`npm test --if-present`) dan linting (`npm run lint --if-present`).
-4. **Build**: Melakukan kompilasi TypeScript (`npm run build`).
-5. **Docker Build**: Membuat image Docker `${APP_NAME}:latest` dan mengekspornya menjadi file `.tar`.
-6. **Ship Image to VM**: Mentransfer file image `.tar` ke Multipass VM tujuan (`sitako-vm`).
-7. **Deploy (Dinamis sesuai `DEPLOY_MODE`)**:
-   - **Standalone**: Mentransfer `docker-compose.yml` & `infra/`, memuat image (`docker load`), menjalankan `docker compose -f docker-compose.yml up -d --remove-orphans`, dan mengeksekusi migrasi DB.
-   - **Multi-Replica**: Mentransfer `docker-compose.prod.yml` & `infra/`, memuat image (`docker load`), menjalankan `docker compose -f docker-compose.prod.yml up -d --scale app=${REPLICA_COUNT} --remove-orphans`, dan mengeksekusi migrasi DB.
-   - **K3s**: Mentransfer folder `k8s/`, mengimpor image ke containerd K3s (`sudo k3s ctr -n k8s.io images import`), menerapkan seluruh manifest Kubernetes, memicu rollout restart, dan mengeksekusi migrasi DB di dalam Pod.
-8. **Health Check**: Menguji endpoint aplikasi secara dinamis (port `8080` untuk standalone, port `80` untuk multi-replica dan K3s) dengan mekanisme retry otomatis.
-9. **Cleanup**: Membersihkan file `.tar` di workspace Jenkins dan di dalam VM Multipass.
 
+1. **Verify VM Connection**: Memvalidasi konektivitas SSH dari agent Jenkins ke Virtual Machine target (VirtualBox via port forwarding `2222`).
+2. **Checkout**: Mengambil kode sumber terbaru dari repositori Git (`checkout scm`).
+3. **Install Dependencies**: Memasang seluruh dependensi Node.js secara deterministik menggunakan `npm ci`.
+4. **Lint**: Memeriksa kualitas dan kepatuhan standar kode TypeScript/JavaScript (`npm run lint --if-present`).
+5. **Test**: Menjalankan pengujian otomatis yang terdiri dari unit test (`npm run test:unit --if-present`) dan feature test (`npm run test:feature --if-present`).
+6. **Build**: Melakukan kompilasi kode sumber TypeScript ke JavaScript murni menggunakan `npm run build` (`tsc && tsc-alias`).
+7. **Docker Build & Push**: Melakukan login ke Docker Registry, mem-build Docker image dengan tag nomor build (`${BUILD_NUMBER}`) dan `latest`, lalu melakukan _push_ image ke Docker Registry.
+8. **Deploy (Dinamis sesuai `DEPLOY_MODE`)**:
+   - **Docker Standalone**: Melakukan _pull_ image terbaru di VM dari registry, menyalin file `docker-compose.yml`, direktori `infra/`, dan file `.env`, menjalankan migrasi DB (`npm run db:migrate:prod`), lalu menyalakan stack container aplikasi tunggal.
+   - **Docker Multi-Replica**: Melakukan _pull_ image terbaru di VM dari registry, menyalin `docker-compose.prod.yml`, direktori `infra/`, dan file `.env`, menjalankan migrasi DB, lalu melakukan _scaling_ replika container `app` sesuai `REPLICA_COUNT` dengan Nginx Load Balancer.
+   - **K3s**: Melakukan _pull_ image terbaru di VM, menyimpannya ke file `.tar` lokal lalu mengimpornya ke runtime containerd K3s (`sudo k3s ctr -n k8s.io images import`), menerapkan seluruh manifest Kubernetes (`k8s/`), membuat/memperbarui Kubernetes Secret dari file `.env`, memicu _rollout restart_ deployment `sitako-app`, dan menjalankan migrasi DB di dalam Pod.
+9. **Health Check**: Menguji endpoint aplikasi di VM secara dinamis via `curl` dengan mekanisme pengulangan otomatis (hingga 10 kali percobaan):
+   - Mode `docker-standalone`: Port `8080`, path `/`
+   - Mode `docker-multi-replica`: Port `80` (Nginx), path `/`
+   - Mode `k3s`: Port `80` (Ingress Traefik), path `/api/health`
+10. **Post Actions (Cleanup & Notification)**: Selalu membersihkan workspace di agent Jenkins (`deleteDir()`) serta mencatat notifikasi status eksekusi pipeline (berhasil / gagal).

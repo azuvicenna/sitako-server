@@ -1,0 +1,56 @@
+# ==========================================
+# Horizontal Pod Autoscaler (HPA)
+# ==========================================
+# HPA akan secara otomatis menambah/mengurangi jumlah Pod sitako-app
+# berdasarkan utilisasi CPU dan Memory aktual vs request yang didefinisikan di 03-app.yaml.
+#
+# Prasyarat:
+#   - K3s secara default sudah menyertakan metrics-server.
+#   - Pastikan resource requests sudah terdefinisi di Deployment (03-app.yaml).
+#
+# Cara cek status HPA:
+#   kubectl get hpa -n sitako
+#   kubectl describe hpa sitako-app-hpa -n sitako
+# ==========================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sitako-app-hpa
+  namespace: sitako
+  labels:
+    app: sitako-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sitako-app
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    # Scale UP jika rata-rata penggunaan CPU Pod melebihi 70% dari request (100m)
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    # Scale UP jika rata-rata penggunaan Memory Pod melebihi 80% dari request (128Mi)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60   # Tunggu 60 detik sebelum scale UP lagi (hindari flapping)
+      policies:
+        - type: Pods
+          value: 2                     # Tambah maksimal 2 Pod sekaligus
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Tunggu 5 menit sebelum scale DOWN (stabilisasi setelah puncak trafik)
+      policies:
+        - type: Pods
+          value: 1                     # Kurangi maksimal 1 Pod sekaligus
+          periodSeconds: 120

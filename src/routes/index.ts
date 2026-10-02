@@ -15,10 +15,12 @@ import memberDashboardRoutes from './member/dashboard';
 import memberFinePaymentRoutes from './member/fine-payment';
 import memberTransactionRoutes from './member/transaction';
 import profileRoutes from './profile/profile';
+import telemetryRoutes from './telemetry/telemetry.routes';
 import tripayWebhookRoutes from './webhook/tripay';
 
 const router: Router = Router();
 
+router.use('/telemetry', telemetryRoutes);
 router.use('/auth', authRoutes);
 router.use('/webhooks/tripay', tripayWebhookRoutes);
 

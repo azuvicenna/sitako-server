@@ -5,6 +5,7 @@ Dokumentasi ini disusun khusus untuk tim Frontend sebagai panduan integrasi leng
 ---
 
 ## Daftar Isi
+
 1. [Ketentuan Umum & Arsitektur Request](#ketentuan-umum--arsitektur-request)
 2. [Format Respons Standar](#format-respons-standar)
 3. [Autentikasi (`/api/auth`)](#1-autentikasi-apiauth)
@@ -23,27 +24,33 @@ Dokumentasi ini disusun khusus untuk tim Frontend sebagai panduan integrasi leng
 16. [Dashboard - Anggota (`/api/member/dashboard`)](#14-dashboard---anggota-apimemberdashboard)
 17. [Webhook Payment Gateway Tripay (`/api/webhooks/tripay`)](#15-webhook-payment-gateway-tripay-apiwebhookstripay)
 18. [Laporan Sirkulasi & Denda - Pustakawan (`/api/reports`)](#16-laporan-sirkulasi--denda---pustakawan-apireports)
-19. [Daftar Enum Database](#17-daftar-enum-database)
-20. [Tips & Panduan Integrasi Frontend](#18-tips--panduan-integrasi-frontend)
+19. [Telemetri & Observabilitas Sistem (`/api/telemetry`, `/api/health`, `/metrics`)](#17-telemetri--observabilitas-sistem-apitelemetry-apihealth-metrics)
+20. [Daftar Enum Database](#18-daftar-enum-database)
+21. [Tips & Panduan Integrasi Frontend](#19-tips--panduan-integrasi-frontend)
 
 ---
 
 ## Ketentuan Umum & Arsitektur Request
 
 ### 1. Base URL
+
 Seluruh endpoint API memiliki prefix `/api`:
+
 ```
 http://localhost:5000/api
 ```
-*(Sesuaikan port dan host dengan file `.env` atau URL staging/production).*
+
+_(Sesuaikan port dan host dengan file `.env` atau URL staging/production)._
 
 ### 2. Autentikasi (Cookie-based JWT)
+
 - SITAKO menggunakan **HttpOnly Cookie** bernama `token` untuk sesi login dan `captcha_token` untuk proses CAPTCHA.
 - Setiap pemanggilan request dari Frontend ke API yang membutuhkan autentikasi **WAJIB** mengaktifkan opsi kredensial:
   - **Axios**: `withCredentials: true`
   - **Fetch API**: `credentials: "include"`
 
 ### 3. Header Standar
+
 - Request dengan JSON body: `Content-Type: application/json`
 - Request file upload: `Content-Type: multipart/form-data`
 
@@ -52,7 +59,9 @@ http://localhost:5000/api
 ## Format Respons Standar
 
 ### 1. Respons Berhasil (200 / 201)
+
 Format respons dasar:
+
 ```json
 {
   "success": true,
@@ -62,7 +71,9 @@ Format respons dasar:
 ```
 
 ### 2. Respons Berhasil dengan Pagination
+
 Untuk endpoint yang memiliki pagination tabel:
+
 ```json
 {
   "success": true,
@@ -82,7 +93,9 @@ Untuk endpoint yang memiliki pagination tabel:
 ```
 
 ### 3. Respons Gagal Validasi Zod (400 Bad Request)
+
 Format standar yang dikembalikan saat middleware validasi Zod mendeteksi payload tidak sesuai skema:
+
 ```json
 {
   "success": false,
@@ -97,14 +110,18 @@ Format standar yang dikembalikan saat middleware validasi Zod mendeteksi payload
 ```
 
 ### 4. Respons Gagal Autentikasi (401 Unauthorized)
+
 Format saat cookie `token` tidak disertakan atau sesi kedaluwarsa:
+
 ```json
 {
   "success": false,
   "message": "Akses ditolak. Belum login."
 }
 ```
+
 atau:
+
 ```json
 {
   "success": false,
@@ -113,6 +130,7 @@ atau:
 ```
 
 ### 5. Respons Gagal Not Found (404 Not Found)
+
 ```json
 {
   "success": false,
@@ -121,6 +139,7 @@ atau:
 ```
 
 ### 6. Respons Kesalahan Server (500 Internal Server Error)
+
 ```json
 {
   "success": false,
@@ -133,6 +152,7 @@ atau:
 ## 1. Autentikasi (`/api/auth`)
 
 ### 1.1 Mendapatkan Gambar CAPTCHA
+
 Mengambil kode CAPTCHA berupa gambar vektor SVG dan menyetel cookie `captcha_token`.
 
 - **Method**: `GET`
@@ -156,6 +176,7 @@ Mengambil kode CAPTCHA berupa gambar vektor SVG dan menyetel cookie `captcha_tok
 ---
 
 ### 1.2 Login Pengguna (Pustakawan / Anggota)
+
 Melakukan verifikasi akun menggunakan identifier (NIP untuk Pustakawan, NIS untuk Anggota), kata sandi, dan teks CAPTCHA.
 
 - **Method**: `POST`
@@ -190,7 +211,7 @@ Melakukan verifikasi akun menggunakan identifier (NIP untuk Pustakawan, NIS untu
       }
     }
     ```
-    *(Jika yang login adalah Anggota, field `nip` digantikan oleh `nis`: `"202301001"`).*
+    _(Jika yang login adalah Anggota, field `nip` digantikan oleh `nis`: `"202301001"`)._
 - **Response Error**:
   - `400 Bad Request` (Validasi Zod):
     ```json
@@ -222,6 +243,7 @@ Melakukan verifikasi akun menggunakan identifier (NIP untuk Pustakawan, NIS untu
 ---
 
 ### 1.3 Logout Pengguna
+
 Menghapus cookie sesi `token`.
 
 - **Method**: `POST`
@@ -252,6 +274,7 @@ Menghapus cookie sesi `token`.
 ## 2. Profil Pengguna (`/api/profile`)
 
 ### 2.1 Mendapatkan Profil Pribadi
+
 Mengambil data profil pengguna yang sedang login berdasarkan sesi token.
 
 - **Method**: `GET`
@@ -292,6 +315,7 @@ Mengambil data profil pengguna yang sedang login berdasarkan sesi token.
 ---
 
 ### 2.2 Memperbarui Profil Pribadi
+
 Mengubah informasi profil pengguna yang sedang login.
 
 - **Method**: `PUT`
@@ -308,7 +332,7 @@ Mengubah informasi profil pengguna yang sedang login.
     "password": "passwordBaru123"
   }
   ```
-  *(Catatan: Kirimkan hanya field yang ingin diubah).*
+  _(Catatan: Kirimkan hanya field yang ingin diubah)._
 - **Response (200 OK)**:
   ```json
   {
@@ -330,9 +354,7 @@ Mengubah informasi profil pengguna yang sedang login.
     {
       "success": false,
       "message": "Validasi gagal",
-      "errors": [
-        { "field": "email", "message": "Format email tidak valid" }
-      ]
+      "errors": [{ "field": "email", "message": "Format email tidak valid" }]
     }
     ```
   - `401 Unauthorized`:
@@ -355,6 +377,7 @@ Mengubah informasi profil pengguna yang sedang login.
 ## 3. Dashboard Pustakawan (`/api/dashboard`)
 
 ### 3.1 Ringkasan Kartu Dashboard
+
 Statistik utama untuk kartu ringkasan dashboard perpustakaan.
 
 - **Method**: `GET`
@@ -387,17 +410,18 @@ Statistik utama untuk kartu ringkasan dashboard perpustakaan.
 ---
 
 ### 3.2 Transaksi Hari Ini
+
 Daftar transaksi yang dibuat pada hari ini lengkap beserta ringkasan status hari ini.
 
 - **Method**: `GET`
 - **URL**: `/api/dashboard/transaction/today`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `status` | string | Opsional | `"Semua"` | Filter status: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
-  | `page` | integer | Opsional | `1` | Nomor halaman (mulai dari 1) |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman (maks: 100) |
+  | Parameter | Tipe Data | Wajib?   | Default   | Keterangan                                                                                                                                                       |
+  | :-------- | :-------- | :------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `status`  | string    | Opsional | `"Semua"` | Filter status: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
+  | `page`    | integer   | Opsional | `1`       | Nomor halaman (mulai dari 1)                                                                                                                                     |
+  | `limit`   | integer   | Opsional | `10`      | Jumlah data per halaman (maks: 100)                                                                                                                              |
 - **Contoh Request**: `/api/dashboard/transaction/today?status=Dipinjam&page=1&limit=10`
 - **Response (200 OK)**:
   ```json
@@ -456,6 +480,7 @@ Daftar transaksi yang dibuat pada hari ini lengkap beserta ringkasan status hari
 ---
 
 ### 3.3 Statistik Peminjaman Mingguan
+
 Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-rata hariannya untuk grafik/chart.
 
 - **Method**: `GET`
@@ -493,16 +518,17 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ## 4. Manajemen Buku - Pustakawan (`/api/books`)
 
 ### 4.1 Mendapatkan Daftar Buku dengan Pagination
+
 - **Method**: `GET`
 - **URL**: `/api/books/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `bookType` | string | **WAJIB** | - | Pilihan nilai: `"Fisik"` atau `"Digital"` |
-  | `page` | integer | Opsional | `1` | Nomor halaman (mulai dari 1) |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman (maks: 100) |
-  | `search` | string | Opsional | `""` | Pencarian pada: judul, penulis, penerbit, isbn |
+  | Parameter  | Tipe Data | Wajib?    | Default | Keterangan                                     |
+  | :--------- | :-------- | :-------- | :------ | :--------------------------------------------- |
+  | `bookType` | string    | **WAJIB** | -       | Pilihan nilai: `"Fisik"` atau `"Digital"`      |
+  | `page`     | integer   | Opsional  | `1`     | Nomor halaman (mulai dari 1)                   |
+  | `limit`    | integer   | Opsional  | `10`    | Jumlah data per halaman (maks: 100)            |
+  | `search`   | string    | Opsional  | `""`    | Pencarian pada: judul, penulis, penerbit, isbn |
 - **Contoh Request**: `/api/books/?bookType=Fisik&page=1&limit=10&search=clean+code`
 - **Response (200 OK)**:
   ```json
@@ -554,6 +580,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 4.2 Detail Informasi Buku
+
 - **Method**: `GET`
 - **URL**: `/api/books/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -605,27 +632,28 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 4.3 Menambahkan Data Buku Baru
+
 - **Method**: `POST`
 - **URL**: `/api/books/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Keterangan |
-  | :--- | :--- | :--- | :--- |
-  | `bookType` | string | **WAJIB** | `"Fisik"` atau `"Digital"` |
+  | Parameter  | Tipe Data | Wajib?    | Keterangan                 |
+  | :--------- | :-------- | :-------- | :------------------------- |
+  | `bookType` | string    | **WAJIB** | `"Fisik"` atau `"Digital"` |
 - **Request Headers**: `Content-Type: multipart/form-data`
 - **Request Body (`multipart/form-data`)**:
-  | Field | Tipe | Wajib? | Keterangan / Batasan |
-  | :--- | :--- | :--- | :--- |
-  | `judul` | text | Wajib | Judul buku |
-  | `penulis` | text | Wajib | Nama pengarang/penulis |
-  | `isbn` | text | Wajib | Nomor ISBN |
-  | `penerbit` | text | Wajib | Nama penerbit |
-  | `genre` | text / JSON | Wajib | Format JSON string array `["Genre 1", "Genre 2"]` atau string tunggal |
-  | `tipeBuku` | text | Opsional | `"Fisik"` atau `"Digital"` (default sesuai query param) |
-  | `tahunTerbit`| text/number | Wajib | Angka tahun terbit (misal: `"2024"`) |
-  | `jumlahStok` | text/number | Opsional | Jumlah stok buku (default: `0`) |
-  | `cover` | file | **WAJIB** | Gambar cover (JPG, PNG, WEBP, Maksimal 5MB) |
-  | `file` | file | Kondisional | File PDF buku (Wajib jika buku `Digital`, Maksimal 20MB) |
+  | Field         | Tipe        | Wajib?      | Keterangan / Batasan                                                  |
+  | :------------ | :---------- | :---------- | :-------------------------------------------------------------------- |
+  | `judul`       | text        | Wajib       | Judul buku                                                            |
+  | `penulis`     | text        | Wajib       | Nama pengarang/penulis                                                |
+  | `isbn`        | text        | Wajib       | Nomor ISBN                                                            |
+  | `penerbit`    | text        | Wajib       | Nama penerbit                                                         |
+  | `genre`       | text / JSON | Wajib       | Format JSON string array `["Genre 1", "Genre 2"]` atau string tunggal |
+  | `tipeBuku`    | text        | Opsional    | `"Fisik"` atau `"Digital"` (default sesuai query param)               |
+  | `tahunTerbit` | text/number | Wajib       | Angka tahun terbit (misal: `"2024"`)                                  |
+  | `jumlahStok`  | text/number | Opsional    | Jumlah stok buku (default: `0`)                                       |
+  | `cover`       | file        | **WAJIB**   | Gambar cover (JPG, PNG, WEBP, Maksimal 5MB)                           |
+  | `file`        | file        | Kondisional | File PDF buku (Wajib jika buku `Digital`, Maksimal 20MB)              |
 - **Response (200 OK)**:
   ```json
   {
@@ -676,6 +704,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 4.4 Mengubah Data Buku
+
 - **Method**: `PUT`
 - **URL**: `/api/books/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -683,7 +712,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 - **Query Params**: Tidak ada
 - **Request Headers**: `Content-Type: multipart/form-data`
 - **Request Body (`multipart/form-data` - Partial)**:
-  *(Kirim field yang ingin diubah saja)*
+  _(Kirim field yang ingin diubah saja)_
   - `judul`, `penulis`, `isbn`, `penerbit`, `genre`, `tipeBuku`, `tahunTerbit`, `jumlahStok`
   - `cover`: file gambar baru jika ingin mengganti cover
   - `file`: file PDF baru jika ingin mengganti file digital
@@ -732,6 +761,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 4.5 Menghapus Buku
+
 - **Method**: `DELETE`
 - **URL**: `/api/books/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -784,15 +814,16 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ## 5. Manajemen Rak & Susunan Buku - Pustakawan (`/api/shelves`)
 
 ### 5.1 Mendapatkan Daftar Rak Buku
+
 - **Method**: `GET`
 - **URL**: `/api/shelves/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Pencarian pada nama rak |
+  | Parameter | Tipe Data | Wajib?   | Default | Keterangan              |
+  | :-------- | :-------- | :------- | :------ | :---------------------- |
+  | `page`    | integer   | Opsional | `1`     | Nomor halaman           |
+  | `limit`   | integer   | Opsional | `10`    | Jumlah data per halaman |
+  | `search`  | string    | Opsional | `""`    | Pencarian pada nama rak |
 - **Response (200 OK)**:
   ```json
   {
@@ -827,6 +858,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 5.2 Detail Rak Buku
+
 - **Method**: `GET`
 - **URL**: `/api/shelves/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -867,6 +899,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 5.3 Menambahkan Rak Buku
+
 - **Method**: `POST`
 - **URL**: `/api/shelves/`
 - **Auth**: Wajib (Pustakawan)
@@ -893,9 +926,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
     {
       "success": false,
       "message": "Validasi gagal",
-      "errors": [
-        { "field": "namaRak", "message": "Nama rak tidak boleh kosong" }
-      ]
+      "errors": [{ "field": "namaRak", "message": "Nama rak tidak boleh kosong" }]
     }
     ```
   - `401 Unauthorized`:
@@ -909,6 +940,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 5.4 Mengubah Nama Rak
+
 - **Method**: `PUT`
 - **URL**: `/api/shelves/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -956,6 +988,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 5.5 Menghapus Rak
+
 - **Method**: `DELETE`
 - **URL**: `/api/shelves/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -994,6 +1027,7 @@ Statistik jumlah transaksi peminjaman selama 7 hari terakhir beserta nilai rata-
 ---
 
 ### 5.6 Mendapatkan Susunan (Stacks) pada Suatu Rak
+
 Mengambil susunan buku (stack/slot) pada rak tertentu.
 
 - **Method**: `GET`
@@ -1002,11 +1036,11 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 - **Path Params**:
   - `shelfId`: ULID rak
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `page` | integer | Opsional | `1` | Halaman data |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Filter kode susunan, nomor susunan, atau judul buku |
+  | Parameter | Tipe Data | Wajib?   | Default | Keterangan                                          |
+  | :-------- | :-------- | :------- | :------ | :-------------------------------------------------- |
+  | `page`    | integer   | Opsional | `1`     | Halaman data                                        |
+  | `limit`   | integer   | Opsional | `10`    | Jumlah data per halaman                             |
+  | `search`  | string    | Opsional | `""`    | Filter kode susunan, nomor susunan, atau judul buku |
 - **Response (200 OK)**:
   ```json
   {
@@ -1051,6 +1085,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 5.7 Detail Susunan Rak
+
 - **Method**: `GET`
 - **URL**: `/api/shelves/:shelfId/stacks/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1096,6 +1131,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 5.8 Menambahkan Susunan Rak Baru
+
 - **Method**: `POST`
 - **URL**: `/api/shelves/:shelfId/stacks`
 - **Auth**: Wajib (Pustakawan)
@@ -1147,6 +1183,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 5.9 Mengubah Susunan Rak
+
 - **Method**: `PUT`
 - **URL**: `/api/shelves/:shelfId/stacks/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1198,6 +1235,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 5.10 Menghapus Susunan Rak
+
 - **Method**: `DELETE`
 - **URL**: `/api/shelves/:shelfId/stacks/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1243,16 +1281,17 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ## 6. Manajemen Pustakawan (`/api/user/librarians`)
 
 ### 6.1 Mendapatkan Daftar Pustakawan
+
 - **Method**: `GET`
 - **URL**: `/api/user/librarians/`
 - **Auth**: Wajib (Pengguna terautentikasi: Pustakawan / Anggota untuk pemilihan petugas sirkulasi)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `statusActive` | string | **WAJIB** | - | Pilihan nilai: `"Semua"`, `"true"`, atau `"false"` |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Pencarian pada nama, nip, email, telepon |
+  | Parameter      | Tipe Data | Wajib?    | Default | Keterangan                                         |
+  | :------------- | :-------- | :-------- | :------ | :------------------------------------------------- |
+  | `statusActive` | string    | **WAJIB** | -       | Pilihan nilai: `"Semua"`, `"true"`, atau `"false"` |
+  | `page`         | integer   | Opsional  | `1`     | Nomor halaman                                      |
+  | `limit`        | integer   | Opsional  | `10`    | Jumlah data per halaman                            |
+  | `search`       | string    | Opsional  | `""`    | Pencarian pada nama, nip, email, telepon           |
 - **Response (200 OK)**:
   ```json
   {
@@ -1299,6 +1338,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 6.2 Detail Pustakawan
+
 - **Method**: `GET`
 - **URL**: `/api/user/librarians/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1344,20 +1384,21 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 6.3 Menambahkan Pustakawan Baru
+
 - **Method**: `POST`
 - **URL**: `/api/user/librarians/`
 - **Auth**: Wajib (Pustakawan)
 - **Request Headers**: `Content-Type: multipart/form-data`
 - **Request Body (`multipart/form-data`)**:
-  | Field | Tipe | Wajib? | Keterangan |
-  | :--- | :--- | :--- | :--- |
-  | `nama` | text | Wajib | Nama lengkap pustakawan |
-  | `nip` | text | Wajib | NIP |
-  | `email` | text | Wajib | Format email valid |
-  | `password` | text | Wajib | Password akun |
-  | `telepon` | text | Wajib | Nomor telepon aktif |
-  | `status_aktif`| boolean/string | Opsional | `true` atau `false` (default: `true`) |
-  | `foto` | file | **WAJIB** | Foto profil (JPG/PNG/WEBP, Maksimal 2MB) |
+  | Field          | Tipe           | Wajib?    | Keterangan                               |
+  | :------------- | :------------- | :-------- | :--------------------------------------- |
+  | `nama`         | text           | Wajib     | Nama lengkap pustakawan                  |
+  | `nip`          | text           | Wajib     | NIP                                      |
+  | `email`        | text           | Wajib     | Format email valid                       |
+  | `password`     | text           | Wajib     | Password akun                            |
+  | `telepon`      | text           | Wajib     | Nomor telepon aktif                      |
+  | `status_aktif` | boolean/string | Opsional  | `true` atau `false` (default: `true`)    |
+  | `foto`         | file           | **WAJIB** | Foto profil (JPG/PNG/WEBP, Maksimal 2MB) |
 - **Response (200 OK)**:
   ```json
   {
@@ -1396,6 +1437,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 6.4 Mengubah Data Pustakawan
+
 - **Method**: `PUT`
 - **URL**: `/api/user/librarians/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1445,6 +1487,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 6.5 Menghapus Pustakawan
+
 - **Method**: `DELETE`
 - **URL**: `/api/user/librarians/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1492,16 +1535,17 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ## 7. Manajemen Anggota (`/api/user/members`)
 
 ### 7.1 Mendapatkan Daftar Anggota
+
 - **Method**: `GET`
 - **URL**: `/api/user/members/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `statusActive` | string | **WAJIB** | - | Pilihan nilai: `"Semua"`, `"true"`, atau `"false"` |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Pencarian pada nama, nis, email, telepon |
+  | Parameter      | Tipe Data | Wajib?    | Default | Keterangan                                         |
+  | :------------- | :-------- | :-------- | :------ | :------------------------------------------------- |
+  | `statusActive` | string    | **WAJIB** | -       | Pilihan nilai: `"Semua"`, `"true"`, atau `"false"` |
+  | `page`         | integer   | Opsional  | `1`     | Nomor halaman                                      |
+  | `limit`        | integer   | Opsional  | `10`    | Jumlah data per halaman                            |
+  | `search`       | string    | Opsional  | `""`    | Pencarian pada nama, nis, email, telepon           |
 - **Response (200 OK)**:
   ```json
   {
@@ -1548,6 +1592,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 7.2 Detail Anggota
+
 - **Method**: `GET`
 - **URL**: `/api/user/members/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1593,20 +1638,21 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 7.3 Menambahkan Anggota Baru
+
 - **Method**: `POST`
 - **URL**: `/api/user/members/`
 - **Auth**: Wajib (Pustakawan)
 - **Request Headers**: `Content-Type: multipart/form-data`
 - **Request Body (`multipart/form-data`)**:
-  | Field | Tipe | Wajib? | Keterangan |
-  | :--- | :--- | :--- | :--- |
-  | `nama` | text | Wajib | Nama lengkap anggota / siswa |
-  | `nis` | text | Wajib | NIS |
-  | `email` | text | Wajib | Format email valid |
-  | `password` | text | Wajib | Password akun anggota |
-  | `telepon` | text | Wajib | Nomor telepon/WhatsApp |
-  | `status_aktif`| boolean/string | Opsional | `true` atau `false` (default: `true`) |
-  | `foto` | file | **WAJIB** | Foto profil (JPG/PNG/WEBP, Maksimal 2MB) |
+  | Field          | Tipe           | Wajib?    | Keterangan                               |
+  | :------------- | :------------- | :-------- | :--------------------------------------- |
+  | `nama`         | text           | Wajib     | Nama lengkap anggota / siswa             |
+  | `nis`          | text           | Wajib     | NIS                                      |
+  | `email`        | text           | Wajib     | Format email valid                       |
+  | `password`     | text           | Wajib     | Password akun anggota                    |
+  | `telepon`      | text           | Wajib     | Nomor telepon/WhatsApp                   |
+  | `status_aktif` | boolean/string | Opsional  | `true` atau `false` (default: `true`)    |
+  | `foto`         | file           | **WAJIB** | Foto profil (JPG/PNG/WEBP, Maksimal 2MB) |
 - **Response (200 OK)**:
   ```json
   {
@@ -1645,6 +1691,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 7.4 Mengubah Data Anggota
+
 - **Method**: `PUT`
 - **URL**: `/api/user/members/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1694,6 +1741,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 7.5 Menghapus Anggota
+
 - **Method**: `DELETE`
 - **URL**: `/api/user/members/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1741,16 +1789,17 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ## 8. Transaksi Peminjaman - Pustakawan (`/api/transactions`)
 
 ### 8.1 Daftar Seluruh Transaksi
+
 - **Method**: `GET`
 - **URL**: `/api/transactions/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `status` | string | **WAJIB** | - | Nilai: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Mencari kode transaksi, nama anggota, nama pustakawan, atau judul buku |
+  | Parameter | Tipe Data | Wajib?    | Default | Keterangan                                                                                                                                               |
+  | :-------- | :-------- | :-------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `status`  | string    | **WAJIB** | -       | Nilai: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
+  | `page`    | integer   | Opsional  | `1`     | Nomor halaman                                                                                                                                            |
+  | `limit`   | integer   | Opsional  | `10`    | Jumlah data per halaman                                                                                                                                  |
+  | `search`  | string    | Opsional  | `""`    | Mencari kode transaksi, nama anggota, nama pustakawan, atau judul buku                                                                                   |
 - **Contoh Request**: `/api/transactions/?status=Dipinjam&page=1&limit=10`
 - **Response (200 OK)**:
   ```json
@@ -1798,6 +1847,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 8.2 Detail Transaksi
+
 - **Method**: `GET`
 - **URL**: `/api/transactions/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1844,6 +1894,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 8.3 Membuat Transaksi Baru (Check Out)
+
 - **Method**: `POST`
 - **URL**: `/api/transactions/`
 - **Auth**: Wajib (Pustakawan)
@@ -1915,6 +1966,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 8.4 Memperbarui Status Transaksi
+
 - **Method**: `PUT`
 - **URL**: `/api/transactions/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -1969,6 +2021,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 8.5 Menghapus Transaksi
+
 - **Method**: `DELETE`
 - **URL**: `/api/transactions/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2017,15 +2070,16 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ## 9. Aturan Denda - Pustakawan (`/api/fines`)
 
 ### 9.1 Daftar Aturan Denda
+
 - **Method**: `GET`
 - **URL**: `/api/fines/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Pencarian jenis denda, harga, metode perhitungan, atau judul buku |
+  | Parameter | Tipe Data | Wajib?   | Default | Keterangan                                                        |
+  | :-------- | :-------- | :------- | :------ | :---------------------------------------------------------------- |
+  | `page`    | integer   | Opsional | `1`     | Nomor halaman                                                     |
+  | `limit`   | integer   | Opsional | `10`    | Jumlah data per halaman                                           |
+  | `search`  | string    | Opsional | `""`    | Pencarian jenis denda, harga, metode perhitungan, atau judul buku |
 - **Response (200 OK)**:
   ```json
   {
@@ -2063,6 +2117,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 9.2 Detail Aturan Denda
+
 - **Method**: `GET`
 - **URL**: `/api/fines/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2106,6 +2161,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 9.3 Membuat Aturan Denda Baru
+
 - **Method**: `POST`
 - **URL**: `/api/fines/`
 - **Auth**: Wajib (Pustakawan)
@@ -2155,6 +2211,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 9.4 Mengubah Aturan Denda
+
 - **Method**: `PUT`
 - **URL**: `/api/fines/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2206,6 +2263,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 9.5 Menghapus Aturan Denda
+
 - **Method**: `DELETE`
 - **URL**: `/api/fines/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2251,15 +2309,16 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ## 10. Pembayaran Denda - Pustakawan (`/api/fine-payments`)
 
 ### 10.1 Daftar Pembayaran Denda
+
 - **Method**: `GET`
 - **URL**: `/api/fine-payments/`
 - **Auth**: Wajib (Pustakawan)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Pencarian nominal denda, metode bayar, nama anggota, nama pustakawan, kode transaksi, judul buku |
+  | Parameter | Tipe Data | Wajib?   | Default | Keterangan                                                                                       |
+  | :-------- | :-------- | :------- | :------ | :----------------------------------------------------------------------------------------------- |
+  | `page`    | integer   | Opsional | `1`     | Nomor halaman                                                                                    |
+  | `limit`   | integer   | Opsional | `10`    | Jumlah data per halaman                                                                          |
+  | `search`  | string    | Opsional | `""`    | Pencarian nominal denda, metode bayar, nama anggota, nama pustakawan, kode transaksi, judul buku |
 - **Response (200 OK)**:
   ```json
   {
@@ -2301,6 +2360,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 10.2 Detail Pembayaran Denda
+
 - **Method**: `GET`
 - **URL**: `/api/fine-payments/detail/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2351,6 +2411,7 @@ Mengambil susunan buku (stack/slot) pada rak tertentu.
 ---
 
 ### 10.3 Mencatat Pembayaran Denda Manual (Tunai)
+
 Digunakan oleh Pustakawan untuk mencatat pembayaran denda langsung/tunai di perpustakaan.
 
 - **Method**: `POST`
@@ -2409,6 +2470,7 @@ Digunakan oleh Pustakawan untuk mencatat pembayaran denda langsung/tunai di perp
 ---
 
 ### 10.4 Mengubah Data Pembayaran Denda
+
 - **Method**: `PUT`
 - **URL**: `/api/fine-payments/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2467,6 +2529,7 @@ Digunakan oleh Pustakawan untuk mencatat pembayaran denda langsung/tunai di perp
 ---
 
 ### 10.5 Menghapus Data Pembayaran Denda
+
 - **Method**: `DELETE`
 - **URL**: `/api/fine-payments/:id`
 - **Auth**: Wajib (Pustakawan)
@@ -2519,6 +2582,7 @@ Digunakan oleh Pustakawan untuk mencatat pembayaran denda langsung/tunai di perp
 ## 11. Perpustakaan & Bookmark - Anggota (`/api/book`)
 
 ### 11.1 Mengambil Daftar Buku (Katalog Member)
+
 Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam atau dibaca oleh anggota, didukung pagination dan pencarian.
 
 - **Method**: `GET`
@@ -2542,10 +2606,7 @@ Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam
         "penulis": "Robert C. Martin",
         "penerbit": "Prentice Hall",
         "isbn": "978-0132350884",
-        "genre": [
-          "Technology",
-          "Programming"
-        ],
+        "genre": ["Technology", "Programming"],
         "tipeBuku": "Fisik",
         "tahunTerbit": 2008,
         "jumlahStok": 3,
@@ -2557,10 +2618,7 @@ Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam
         "penulis": "Pramoedya Ananta Toer",
         "penerbit": "Hasta Mitra",
         "isbn": "978-9799731234",
-        "genre": [
-          "Historical",
-          "Fiction"
-        ],
+        "genre": ["Historical", "Fiction"],
         "tipeBuku": "Digital",
         "tahunTerbit": 1980,
         "jumlahStok": 0,
@@ -2604,6 +2662,7 @@ Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam
 ---
 
 ### 11.2 Melihat Detail Buku (Sisi Anggota)
+
 - **Method**: `GET`
 - **URL**: `/api/book/detail/:id`
 - **Auth**: Wajib (Anggota)
@@ -2653,6 +2712,7 @@ Mengambil daftar katalog buku yang tersedia di perpustakaan untuk dapat dipinjam
 ---
 
 ### 11.2 Membaca Buku Digital (PDF Reader)
+
 Mengambil URL file digital buku untuk keperluan viewer PDF di frontend.
 
 - **Method**: `GET`
@@ -2696,6 +2756,7 @@ Mengambil URL file digital buku untuk keperluan viewer PDF di frontend.
 ---
 
 ### 11.3 Menambahkan Buku ke Bookmark
+
 Menyimpan buku ke daftar simpanan/favorit anggota.
 
 - **Method**: `POST`
@@ -2745,6 +2806,7 @@ Menyimpan buku ke daftar simpanan/favorit anggota.
 ---
 
 ### 11.4 Menghapus Bookmark
+
 - **Method**: `DELETE`
 - **URL**: `/api/book/bookmark/delete/:bookmarkId`
 - **Auth**: Wajib (Anggota)
@@ -2786,6 +2848,7 @@ Menyimpan buku ke daftar simpanan/favorit anggota.
 ---
 
 ### 11.5 Mengambil Daftar Bookmark (Pagination)
+
 Melihat daftar seluruh buku yang disimpan/dibookmark oleh anggota yang sedang login, didukung pagination dan pencarian.
 
 - **Method**: `GET`
@@ -2810,10 +2873,7 @@ Melihat daftar seluruh buku yang disimpan/dibookmark oleh anggota yang sedang lo
           "penulis": "James Clear",
           "cover": "cover-atomic.jpg",
           "tipeBuku": "Fisik",
-          "genre": [
-            "Self-Improvement",
-            "Productivity"
-          ]
+          "genre": ["Self-Improvement", "Productivity"]
         },
         "createdAt": "2026-09-14T10:00:00.000Z"
       },
@@ -2825,9 +2885,7 @@ Melihat daftar seluruh buku yang disimpan/dibookmark oleh anggota yang sedang lo
           "penulis": "Henry Manampiring",
           "cover": "cover-filosofi.jpg",
           "tipeBuku": "Digital",
-          "genre": [
-            "Philosophy"
-          ]
+          "genre": ["Philosophy"]
         },
         "createdAt": "2026-09-13T08:30:00.000Z"
       }
@@ -2870,18 +2928,19 @@ Melihat daftar seluruh buku yang disimpan/dibookmark oleh anggota yang sedang lo
 ## 12. Transaksi - Anggota (`/api/member/transactions`)
 
 ### 12.1 Riwayat Transaksi Saya
+
 Melihat seluruh riwayat peminjaman buku milik anggota yang sedang login.
 
 - **Method**: `GET`
 - **URL**: `/api/member/transactions/`
 - **Auth**: Wajib (Anggota)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `status` | string | **WAJIB** | - | Nilai: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
-  | `page` | integer | Opsional | `1` | Halaman data |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Filter kode transaksi, nama pustakawan, atau judul buku |
+  | Parameter | Tipe Data | Wajib?    | Default | Keterangan                                                                                                                                               |
+  | :-------- | :-------- | :-------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `status`  | string    | **WAJIB** | -       | Nilai: `"Semua"`, `"Menunggu Persetujuan"`, `"Dibatalkan"`, `"Menunggu Diambil"`, `"Dipinjam"`, `"Dikembalikan"`, `"Terlambat"`, `"Tidak Mengembalikan"` |
+  | `page`    | integer   | Opsional  | `1`     | Halaman data                                                                                                                                             |
+  | `limit`   | integer   | Opsional  | `10`    | Jumlah data per halaman                                                                                                                                  |
+  | `search`  | string    | Opsional  | `""`    | Filter kode transaksi, nama pustakawan, atau judul buku                                                                                                  |
 - **Contoh Request**: `/api/member/transactions/?status=Dipinjam&page=1&limit=10`
 - **Response (200 OK)**:
   ```json
@@ -2929,6 +2988,7 @@ Melihat seluruh riwayat peminjaman buku milik anggota yang sedang login.
 ---
 
 ### 12.2 Detail Transaksi Saya
+
 - **Method**: `GET`
 - **URL**: `/api/member/transactions/detail/:id`
 - **Auth**: Wajib (Anggota)
@@ -2977,6 +3037,7 @@ Melihat seluruh riwayat peminjaman buku milik anggota yang sedang login.
 ---
 
 ### 12.3 Mengajukan Peminjaman Buku Baru
+
 - **Method**: `POST`
 - **URL**: `/api/member/transactions/`
 - **Auth**: Wajib (Anggota)
@@ -3047,6 +3108,7 @@ Melihat seluruh riwayat peminjaman buku milik anggota yang sedang login.
 ---
 
 ### 12.4 Mengajukan Pengembalian Buku
+
 Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buku hilang.
 
 - **Method**: `POST`
@@ -3062,6 +3124,7 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
   ```
 
 #### Skenario 1: Pengembalian Tepat Waktu (Tidak Terlambat)
+
 - **Response (200 OK)**:
   ```json
   {
@@ -3076,6 +3139,7 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
   ```
 
 #### Skenario 2: Pengembalian Terlambat (Muncul Denda)
+
 - **Response (200 OK)**:
   ```json
   {
@@ -3096,7 +3160,9 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
   ```
 
 #### Skenario 3: Pelaporan Buku Hilang (`isBukuHilang: true`)
+
 - **Response (200 OK)**:
+
   ```json
   {
     "success": true,
@@ -3150,15 +3216,16 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
 ## 13. Pembayaran Denda Online - Anggota (`/api/member/fine-payments`)
 
 ### 13.1 Riwayat Pembayaran Denda Saya
+
 - **Method**: `GET`
 - **URL**: `/api/member/fine-payments/`
 - **Auth**: Wajib (Anggota)
 - **Query Params**:
-  | Parameter | Tipe Data | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `page` | integer | Opsional | `1` | Nomor halaman |
-  | `limit` | integer | Opsional | `10` | Jumlah data per halaman |
-  | `search` | string | Opsional | `""` | Filter metode bayar, kode transaksi, judul buku, atau pustakawan |
+  | Parameter | Tipe Data | Wajib?   | Default | Keterangan                                                       |
+  | :-------- | :-------- | :------- | :------ | :--------------------------------------------------------------- |
+  | `page`    | integer   | Opsional | `1`     | Nomor halaman                                                    |
+  | `limit`   | integer   | Opsional | `10`    | Jumlah data per halaman                                          |
+  | `search`  | string    | Opsional | `""`    | Filter metode bayar, kode transaksi, judul buku, atau pustakawan |
 - **Response (200 OK)**:
   ```json
   {
@@ -3199,6 +3266,7 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
 ---
 
 ### 13.2 Detail Pembayaran Denda Saya
+
 - **Method**: `GET`
 - **URL**: `/api/member/fine-payments/detail/:id`
 - **Auth**: Wajib (Anggota)
@@ -3248,6 +3316,7 @@ Diajukan oleh anggota untuk mengembalikan buku yang dipinjam atau melaporkan buk
 ---
 
 ### 13.3 Menginisiasi Pembayaran Denda Online (Tripay Payment Gateway)
+
 Mengirimkan request pembuatan tagihan pembayaran online melalui Tripay.
 
 - **Method**: `POST`
@@ -3261,7 +3330,7 @@ Mengirimkan request pembuatan tagihan pembayaran online melalui Tripay.
     "paymentMethodCode": "BRIVA"
   }
   ```
-  *(Catatan: `paymentMethodCode` berupa kode channel pembayaran Tripay seperti `BRIVA`, `BNIVA`, `BCAVA`, `QRIS`, `OVO`, dll).*
+  _(Catatan: `paymentMethodCode` berupa kode channel pembayaran Tripay seperti `BRIVA`, `BNIVA`, `BCAVA`, `QRIS`, `OVO`, dll)._
 - **Response (200 OK)**:
   ```json
   {
@@ -3280,7 +3349,7 @@ Mengirimkan request pembuatan tagihan pembayaran online melalui Tripay.
     "createdAt": "2026-09-13T09:00:00.000Z"
   }
   ```
-  *(Frontend dapat me-redirect pengguna ke `checkoutUrl` atau merender kode instruksi pembayaran).*
+  _(Frontend dapat me-redirect pengguna ke `checkoutUrl` atau merender kode instruksi pembayaran)._
 - **Response Error**:
   - `400 Bad Request` (Validasi input gagal):
     ```json
@@ -3318,7 +3387,7 @@ Mengambil ringkasan statistik buku yang sedang dipinjam, total tagihan denda bel
 - **URL**: `/api/member/dashboard`
 - **Auth**: Wajib (Anggota / Member via cookie `token`)
 - **Headers**: `Content-Type: application/json`
-- **Request Body**: *(Tidak ada / kosong)*
+- **Request Body**: _(Tidak ada / kosong)_
 - **Response (200 OK)**:
   ```json
   {
@@ -3434,15 +3503,16 @@ Endpoint penerima callback otomatis dari server Tripay ketika transaksi denda on
 Endpoint laporan sirkulasi transaksi peminjaman buku dan laporan pembayaran denda, mendukung preview JSON untuk tabel Frontend serta ekspor file Excel (`.xlsx`), CSV (`.csv`), dan PDF (`.pdf`).
 
 ### 16.1 Laporan Sirkulasi Peminjaman
+
 - **Method**: `GET`
 - **URL**: `/api/reports/circulation`
 - **Auth**: Wajib (Pustakawan)
 - **Query Parameters**:
-  | Parameter | Tipe | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `startDate` | string | Opsional | - | Tanggal awal filter `tglPinjam` (format `YYYY-MM-DD`, inklusif) |
-  | `endDate` | string | Opsional | - | Tanggal akhir filter `tglPinjam` (format `YYYY-MM-DD`, inklusif) |
-  | `format` | string | Opsional | `json` | Pilihan: `json`, `csv`, `xlsx`, `pdf` |
+  | Parameter   | Tipe   | Wajib?   | Default | Keterangan                                                       |
+  | :---------- | :----- | :------- | :------ | :--------------------------------------------------------------- |
+  | `startDate` | string | Opsional | -       | Tanggal awal filter `tglPinjam` (format `YYYY-MM-DD`, inklusif)  |
+  | `endDate`   | string | Opsional | -       | Tanggal akhir filter `tglPinjam` (format `YYYY-MM-DD`, inklusif) |
+  | `format`    | string | Opsional | `json`  | Pilihan: `json`, `csv`, `xlsx`, `pdf`                            |
 - **Response Berhasil (200 OK - format=json)**:
   ```json
   {
@@ -3498,15 +3568,16 @@ Endpoint laporan sirkulasi transaksi peminjaman buku dan laporan pembayaran dend
 ---
 
 ### 16.2 Laporan Pembayaran Denda
+
 - **Method**: `GET`
 - **URL**: `/api/reports/fines`
 - **Auth**: Wajib (Pustakawan)
 - **Query Parameters**:
-  | Parameter | Tipe | Wajib? | Default | Keterangan |
-  | :--- | :--- | :--- | :--- | :--- |
-  | `startDate` | string | Opsional | - | Tanggal awal filter `tglBayar` (format `YYYY-MM-DD`, inklusif) |
-  | `endDate` | string | Opsional | - | Tanggal akhir filter `tglBayar` (format `YYYY-MM-DD`, inklusif) |
-  | `format` | string | Opsional | `json` | Pilihan: `json`, `csv`, `xlsx`, `pdf` |
+  | Parameter   | Tipe   | Wajib?   | Default | Keterangan                                                      |
+  | :---------- | :----- | :------- | :------ | :-------------------------------------------------------------- |
+  | `startDate` | string | Opsional | -       | Tanggal awal filter `tglBayar` (format `YYYY-MM-DD`, inklusif)  |
+  | `endDate`   | string | Opsional | -       | Tanggal akhir filter `tglBayar` (format `YYYY-MM-DD`, inklusif) |
+  | `format`    | string | Opsional | `json`  | Pilihan: `json`, `csv`, `xlsx`, `pdf`                           |
 - **Response Berhasil (200 OK - format=json)**:
   ```json
   {
@@ -3561,23 +3632,109 @@ Endpoint laporan sirkulasi transaksi peminjaman buku dan laporan pembayaran dend
 
 ---
 
-## 17. Daftar Enum Database
+## 17. Telemetri & Observabilitas Sistem (`/api/telemetry`, `/api/health`, `/metrics`)
+
+Bagian ini mendokumentasikan endpoint observabilitas sistem, health check status kontainer, scraping metrik Prometheus, dan verifikasi status distributed tracing OpenTelemetry.
+
+---
+
+### 1. Mendapatkan Status OpenTelemetry
+
+Mengambil informasi konfigurasi dan status operasional OpenTelemetry SDK pada server (apakah aktif, nama service, versi, environment, dan target OTLP exporter). Setiap pemanggilan ke endpoint ini juga otomatis mencatat span distributed trace untuk validasi APM pipeline.
+
+- **URL Endpoint**:
+  ```
+  GET /api/telemetry/status
+  ```
+- **Akses & Role**: Publik (Dapat diakses tanpa login/cookie untuk pemantauan sistem & diagnostik)
+- **Header Request**:
+  - `Accept: application/json`
+- **Path / Query Parameter**: Tidak ada
+- **Request Body**: Tidak ada
+
+- **Response Berhasil (200 OK)**:
+
+  ```json
+  {
+    "success": true,
+    "message": "Informasi status OpenTelemetry berhasil diambil",
+    "data": {
+      "enabled": true,
+      "serviceName": "sitako-server",
+      "serviceVersion": "1.0.0",
+      "environment": "production",
+      "otlpEndpoint": "http://localhost:4318",
+      "tracesEndpoint": "http://localhost:4318/v1/traces",
+      "metricsEndpoint": "http://localhost:4318/v1/metrics",
+      "logSpans": false
+    }
+  }
+  ```
+
+- **Response Gagal (500 Internal Server Error)**:
+
+  ```json
+  {
+    "success": false,
+    "message": "Internal server error"
+  }
+  ```
+
+- **Catatan Teknis**:
+  - Endpoint ini menghasilkan active span `telemetry.status.check` pada tracer `sitako-server`.
+  - Berguna untuk health check APM di dashboard DevOps (Jaeger, Tempo, Grafana, SigNoz).
+
+---
+
+### 2. Health Check Server & Container
+
+Endpoint standar untuk memeriksa ketersediaan service aplikasi (liveness / readiness probe) oleh Docker Compose, Minikube, K3s, atau load balancer.
+
+- **URL Endpoint**:
+  ```
+  GET /api/health
+  ```
+- **Akses & Role**: Publik
+- **Request Body**: Tidak ada
+- **Response**: `200 OK` (HTTP status code 200 tanpa konten)
+
+---
+
+### 3. Prometheus Metrics Scraping
+
+Endpoint scraping berkala untuk server Prometheus guna mengumpulkan metrik runtime Node.js, pemakaian memory, event loop lag, dan HTTP request latency.
+
+- **URL Endpoint**:
+  ```
+  GET /metrics
+  ```
+- **Akses & Role**: Publik / Internal Monitoring
+- **Header Response**: `Content-Type: text/plain; version=0.0.4; charset=utf-8`
+- **Format Konten**: Teks eksposur Prometheus standar (Counter, Histogram, Gauge).
+
+---
+
+## 18. Daftar Enum Database
 
 Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabel di Frontend:
 
 ### 1. Tipe Buku (`tipe_buku_enum`)
+
 - `"Fisik"`
 - `"Digital"`
 
 ### 2. Jenis Denda (`tipe_denda_enum`)
+
 - `"Terlambat"`
 - `"Hilang"`
 
 ### 3. Metode Perhitungan Denda (`tipe_kalkulasi_enum`)
+
 - `"Akumulasi"` (dikalikan dengan jumlah hari keterlambatan)
 - `"Flat"` (nominal tetap satu kali)
 
 ### 4. Status Transaksi Peminjaman (`status_transaksi_enum`)
+
 - `"Menunggu Persetujuan"`
 - `"Dibatalkan"`
 - `"Menunggu Diambil"`
@@ -3587,10 +3744,12 @@ Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabe
 - `"Tidak Mengembalikan"`
 
 ### 5. Metode Pembayaran Denda (`metode_pembayaran_enum`)
+
 - `"Tunai"`
 - `"Non-Tunai"`
 
 ### 6. Status Pembayaran Denda (`status_pembayaran_enum`)
+
 - `"UNPAID"`
 - `"PAID"`
 - `"EXPIRED"`
@@ -3598,9 +3757,10 @@ Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabe
 
 ---
 
-## 18. Tips & Panduan Integrasi Frontend
+## 19. Tips & Panduan Integrasi Frontend
 
 1. **Pengaturan Axios Client**:
+
    ```typescript
    import axios from 'axios';
 
@@ -3617,6 +3777,7 @@ Gunakan nilai-nilai enum berikut ini pada form select / dropdown dan filter tabe
 
 3. **Penanganan Form Multipart**:
    - Untuk upload buku (`/api/books`) dan foto pengguna (`/api/user/librarians`, `/api/user/members`), gunakan objek `FormData`:
+
    ```typescript
    const formData = new FormData();
    formData.append('judul', data.judul);

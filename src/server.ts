@@ -1,3 +1,6 @@
+// OpenTelemetry SDK harus diinisialisasi sebelum module lain di-load
+import './instrumentation';
+
 import app from '@/app';
 import { connectRedis } from '@/config/redis';
 import logger from '@/utils/core/logger';
